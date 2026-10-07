@@ -10,6 +10,8 @@ export type Settings = {
   showJackpot: boolean;
   maintenance: boolean;
   ticketPoints: number;
+  /** Points for each year of older results. */
+  historyYearPoints: number;
   dailyPoints: number;
   signupPoints: number;
   /** Points won for divisions 1 to 7. */
@@ -29,6 +31,7 @@ const DEFAULTS: Settings = {
   showJackpot: true,
   maintenance: false,
   ticketPoints: 10,
+  historyYearPoints: 200,
   dailyPoints: 100,
   signupPoints: 1000,
   prizePoints: DEFAULT_PRIZES,
@@ -48,6 +51,7 @@ export async function getSettings(): Promise<Settings> {
         showJackpot: m.show_jackpot !== '0',
         maintenance: m.maintenance === '1',
         ticketPoints: nat(m.ticket_points, 10),
+        historyYearPoints: nat(m.history_year_points, 200),
         dailyPoints: nat(m.daily_points, 100),
         signupPoints: nat(m.signup_points, 1000),
         prizePoints: DEFAULT_PRIZES.map((d, i) => nat(m.prize_points?.split(',')[i]?.trim(), d)),
@@ -68,6 +72,7 @@ export async function saveSettings(s: Settings) {
     ['show_jackpot', s.showJackpot ? '1' : '0'],
     ['maintenance', s.maintenance ? '1' : '0'],
     ['ticket_points', String(s.ticketPoints)],
+    ['history_year_points', String(s.historyYearPoints)],
     ['daily_points', String(s.dailyPoints)],
     ['signup_points', String(s.signupPoints)],
     ['prize_points', s.prizePoints.join(',')],

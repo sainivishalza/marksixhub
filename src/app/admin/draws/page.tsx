@@ -29,6 +29,7 @@ export default async function DrawsPage({ searchParams }: { searchParams: Search
         {canEdit ? (
           <>
             <Link href="/admin/draws/import" className={buttonVariants({ variant: 'outline' })}>Import CSV</Link>
+            <Link href="/admin/draws/history" className={buttonVariants({ variant: 'outline' })}>Import past results</Link>
             <Link href="/admin/draws/new" className={buttonVariants()}>Add draw</Link>
           </>
         ) : null}

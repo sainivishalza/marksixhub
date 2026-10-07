@@ -36,7 +36,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </Panel>
 
         <Panel title="Points (free play, no cash value)">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Points per year of older results" hint="1 year costs this much, 2 years twice as much, up to 9 years."><input name="history_year_points" type="number" min={0} defaultValue={s.historyYearPoints} className={inputClass} /></Field>
             <Field label="Points per ticket"><input name="ticket_points" type="number" min={0} defaultValue={s.ticketPoints} className={inputClass} /></Field>
             <Field label="Daily free points"><input name="daily_points" type="number" min={0} defaultValue={s.dailyPoints} className={inputClass} /></Field>
             <Field label="Sign-up points"><input name="signup_points" type="number" min={0} defaultValue={s.signupPoints} className={inputClass} /></Field>

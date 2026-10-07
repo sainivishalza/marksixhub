@@ -100,3 +100,34 @@ test('order numbers follow the draw and restart for each draw', async () => {
   assert.equal(makeOrderNo('26/107', 12), '261070012');
   assert.equal(makeOrderNo('26/107', 10000), '2610710000');
 });
+
+test('history rules: windows, prices and years needed', async () => {
+  const { yearsBefore, effectiveFrom, upgradeCost, yearsNeeded } = await import('../src/lib/history-rules.ts');
+  assert.equal(yearsBefore('2026-09-26', 1), '2025-09-26');
+  assert.equal(yearsBefore('2026-09-26', 9), '2017-09-26');
+  assert.equal(yearsBefore('2024-02-29', 1), '2023-02-28');
+  assert.equal(effectiveFrom('2026-05-01', null), '2026-05-01');
+  assert.equal(effectiveFrom('2026-05-01', '2024-01-01'), '2024-01-01');
+  assert.equal(effectiveFrom('2026-05-01', '2026-09-01'), '2026-05-01'); // buying never narrows the free window
+  assert.equal(effectiveFrom(null, '2024-01-01'), null); // fewer than 40 results: everything is free
+  assert.equal(upgradeCost(0, 1, 200), 200);
+  assert.equal(upgradeCost(0, 3, 200), 600);
+  assert.equal(upgradeCost(2, 3, 200), 200); // only the extra year
+  assert.equal(upgradeCost(3, 3, 200), 0);
+  assert.equal(yearsNeeded('2026-09-26', '2026-01-01'), 1);
+  assert.equal(yearsNeeded('2026-09-26', '2025-09-26'), 1);
+  assert.equal(yearsNeeded('2026-09-26', '2025-09-25'), 2);
+  assert.equal(yearsNeeded('2026-09-26', '2018-01-02'), 9);
+});
+
+test('xlsx reader: text, numbers, empty cells and XML entities', async () => {
+  const { readXlsx } = await import('../src/lib/xlsx.ts');
+  const { readFileSync } = await import('node:fs');
+  const rows = readXlsx(readFileSync(new URL('./fixtures/results.xlsx', import.meta.url)));
+  assert.equal(rows.length, 4);
+  assert.deepEqual(rows[0].slice(0, 3), ['Draw No.', 'Draw Date', 'Num 1']);
+  assert.deepEqual(rows[1], ['25/010', '15/02/2025', 3, 12, 25, 31, 40, 49, 7]);
+  assert.equal(rows[2][8], '&<>"x');
+  assert.equal(rows[3][1], null);
+  assert.throws(() => readXlsx(Buffer.from('not a zip file at all, just text')), /not an Excel/);
+});

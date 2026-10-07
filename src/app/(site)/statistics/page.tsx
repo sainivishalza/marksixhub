@@ -1,6 +1,9 @@
 import { NumberBall } from '@/components/ball';
 import { JsonLd } from '@/components/json-ld';
+import Link from 'next/link';
+import { getUser } from '@/lib/auth';
 import { getDraws } from '@/lib/data';
+import { getHistoryAccess } from '@/lib/history';
 import { breadcrumbLd } from '@/lib/seo';
 import { seoMetadata } from '@/lib/seo-db';
 import { numberStats } from '@/lib/stats';
@@ -9,7 +12,8 @@ export const generateMetadata = () => seoMetadata('/statistics');
 export const dynamic = 'force-dynamic';
 
 export default async function StatisticsPage() {
-  const { draws } = await getDraws(2000);
+  const access = await getHistoryAccess(await getUser());
+  const { draws } = await getDraws(2000, 0, access.from);
   const stats = numberStats(draws);
   const by = (f: (a: (typeof stats)[number], b: (typeof stats)[number]) => number) => [...stats].sort(f).slice(0, 10);
   const hot = by((a, b) => b.count - a.count || a.n - b.n);
@@ -35,7 +39,7 @@ export default async function StatisticsPage() {
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <h1 className="text-4xl sm:text-5xl">Mark Six number statistics</h1>
       <p className="mb-8 mt-3 max-w-[65ch] text-mute">
-        How often each number from 1 to 49 has been drawn in the {draws.length} Mark Six results on this site. The extra number is not counted.
+        How often each number from 1 to 49 has been drawn in the {draws.length} Mark Six results you can see. The extra number is not counted.{access.locked ? <> <Link href="/results#unlock" className="text-gold-bright underline-offset-4 hover:underline">Unlock older results</Link> for statistics over a longer history.</> : null}
         Every draw is independent: past results do not make any number more or less likely next time.
       </p>
 

@@ -152,6 +152,7 @@ export const SETTING_DEFAULTS = {
   announcement: '',
   show_jackpot: '1',
   maintenance: '0',
+  history_year_points: '200',
   ticket_points: '10',
   daily_points: '100',
   signup_points: '1000',
@@ -227,6 +228,8 @@ export async function migrate() {
     const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM orders WHERE draw_no=?', [o.draw_no]);
     await exec('UPDATE orders SET seq=?, order_no=? WHERE id=?', [Number(n), makeOrderNo(o.draw_no, Number(n)), o.id]);
   }
+
+  if (!(await hasColumn('users', 'history_years'))) await exec('ALTER TABLE users ADD COLUMN history_years TINYINT NOT NULL DEFAULT 0, ADD COLUMN history_from DATE NULL');
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);

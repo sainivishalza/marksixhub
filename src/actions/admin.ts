@@ -9,6 +9,8 @@ import { exec, query, tx, type Tx } from '@/lib/db';
 import { audit } from '@/lib/audit';
 import { markVerified } from '@/lib/verify';
 import { notifyOrders } from '@/lib/order-mail';
+import { HISTORY_MAX_YEARS, yearsBefore } from '@/lib/history-rules';
+import { excelSerialToIso, readXlsx, type Cell } from '@/lib/xlsx';
 import { addPoints, reversePayouts, settleTickets } from '@/lib/points';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
@@ -265,6 +267,7 @@ export async function saveSettingsAction(fd: FormData) {
     showJackpot: Boolean(fd.get('show_jackpot')),
     maintenance: Boolean(fd.get('maintenance')),
     ticketPoints: int(fd, 'ticket_points'),
+    historyYearPoints: int(fd, 'history_year_points'),
     dailyPoints: int(fd, 'daily_points'),
     signupPoints: int(fd, 'signup_points'),
     prizePoints: Array.from({ length: 7 }, (_, i) => int(fd, `prize_${i + 1}`)),
@@ -376,4 +379,95 @@ export async function setVerifiedAction(fd: FormData) {
   await markVerified(id);
   await audit(me.id, 'user.verify', `user ${id}`);
   back(`/admin/users/${id}`, 'ok', 'Email marked as confirmed.');
+}
+
+/* ---------- historical results from Excel ---------- */
+
+export type HistoryImportState = { added?: number; skipped?: number; range?: string; errors?: string[] };
+
+const HEADER_ALIASES: Record<string, string> = {
+  'draw no.': 'no', 'draw no': 'no', draw_no: 'no', drawno: 'no',
+  'draw date': 'date', draw_date: 'date', date: 'date',
+  'special number': 'extra', special: 'extra', extra: 'extra',
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6].flatMap((i) => [[`num ${i}`, `n${i}`], [`n${i}`, `n${i}`], [`num${i}`, `n${i}`]])),
+};
+
+/** dd/mm/yyyy, yyyy-mm-dd or an Excel date number, as YYYY-MM-DD (or null). */
+function toIsoDate(v: Cell): string | null {
+  if (typeof v === 'number') return v > 20_000 && v < 80_000 ? excelSerialToIso(v) : null;
+  const s = String(v ?? '').trim();
+  const dmy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  const [y, m, d] = dmy ? [Number(dmy[3]), Number(dmy[2]), Number(dmy[1])] : /^(\d{4})-(\d{2})-(\d{2})$/.test(s) ? s.split('-').map(Number) : [0, 0, 0];
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return y && t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d ? t.toISOString().slice(0, 10) : null;
+}
+
+/** Adds past results from an Excel sheet. Draws that already exist are left exactly as they are. */
+export async function importHistoryAction(_prev: HistoryImportState, fd: FormData): Promise<HistoryImportState> {
+  const me = await requireRole('content');
+  const file = fd.get('file');
+  if (!(file instanceof File) || file.size === 0) return { errors: ['Choose an Excel (.xlsx) file.'] };
+  if (file.size > 5_000_000) return { errors: ['That file is too large. Keep it under 5 MB.'] };
+  let rows: Cell[][];
+  try {
+    rows = readXlsx(Buffer.from(await file.arrayBuffer()));
+  } catch (err) {
+    return { errors: [err instanceof Error ? err.message : 'Could not read that file.'] };
+  }
+  const head = (rows[0] ?? []).map((h) => HEADER_ALIASES[String(h ?? '').trim().toLowerCase()] ?? '');
+  const col = (k: string) => head.indexOf(k);
+  const need = ['no', 'date', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'extra'];
+  const missing = need.filter((k) => col(k) < 0);
+  if (missing.length) return { errors: ['The first row must have these columns: Draw No., Draw Date, Num 1 to Num 6 and Special Number.'] };
+  if (rows.length - 1 > 20_000) return { errors: ['Too many rows. Import at most 20,000 at a time.'] };
+
+  const errors: string[] = [];
+  const out: [string, string, string, number][] = [];
+  const seen = new Set<string>();
+  rows.slice(1).forEach((r, i) => {
+    if (r.every((c) => c === null || c === '')) return;
+    const line = i + 2;
+    const no = String(r[col('no')] ?? '').trim();
+    const date = toIsoDate(r[col('date')]);
+    const nums = ['n1', 'n2', 'n3', 'n4', 'n5', 'n6'].map((k) => Number(r[col(k)]));
+    const extra = Number(r[col('extra')]);
+    const all = [...nums, extra];
+    if (!/^\d{2}\/\d{3}$/.test(no)) errors.push(`Line ${line}: draw number "${no}" should look like 26/107.`);
+    else if (seen.has(no)) errors.push(`Line ${line}: draw ${no} appears twice.`);
+    else if (!date) errors.push(`Line ${line}: draw ${no} has a date that is not valid.`);
+    else if (!all.every((n) => Number.isInteger(n) && n >= 1 && n <= 49) || new Set(all).size !== 7) errors.push(`Line ${line}: draw ${no} needs six different numbers and a different special number, all from 1 to 49.`);
+    else {
+      seen.add(no);
+      out.push([no, date, [...nums].sort((a, b) => a - b).join(','), extra]);
+    }
+  });
+  if (errors.length) return { errors: [...errors.slice(0, 20), ...(errors.length > 20 ? [`...and ${errors.length - 20} more.`] : []), 'Nothing was imported. Fix these lines and try again.'] };
+  if (!out.length) return { errors: ['No results found in that file.'] };
+
+  // The driver's affected-row count also counts rows that matched, so count the table before and after instead.
+  const [{ n: before }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM draws');
+  for (let i = 0; i < out.length; i += 200) {
+    const chunk = out.slice(i, i + 200);
+    await exec(
+      `INSERT INTO draws (draw_no, draw_date, status, nums, extra) VALUES ${chunk.map(() => "(?,?,'published',?,?)").join(',')} ON DUPLICATE KEY UPDATE id=id`,
+      chunk.flat(),
+    );
+  }
+  const [{ n: after }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM draws');
+  const added = Number(after) - Number(before);
+  const dates = out.map((o) => o[1]).sort();
+  await audit(me.id, 'draw.import_history', `${added} added, ${out.length - added} already there (${dates[0]} to ${dates[dates.length - 1]})`);
+  return { added, skipped: out.length - added, range: `${dates[0]} to ${dates[dates.length - 1]}` };
+}
+
+/** Gives or removes paid history by hand, without charging points (support cases). */
+export async function setHistoryAction(fd: FormData) {
+  const me = await requireRole('manage');
+  const id = int(fd, 'id');
+  const years = Math.min(HISTORY_MAX_YEARS, Math.max(0, int(fd, 'years')));
+  const [newest] = await query<RowDataPacket & { d: string | null }>("SELECT MAX(draw_date) AS d FROM draws WHERE status='published'");
+  const from = years > 0 && newest?.d ? yearsBefore(String(newest.d).slice(0, 10), years) : null;
+  await exec('UPDATE users SET history_years=?, history_from=? WHERE id=?', [years, from, id]);
+  await audit(me.id, 'user.history', `user ${id}: ${years} years`);
+  back(`/admin/users/${id}`, 'ok', years ? `History access set to ${years} year${years === 1 ? '' : 's'}.` : 'History access removed.');
 }

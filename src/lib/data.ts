@@ -45,11 +45,14 @@ export async function getNextDraw(): Promise<Draw | null> {
   return rows[0] ? toDraw(rows[0]) : null;
 }
 
-export async function getDraws(limit: number, offset = 0): Promise<{ draws: Draw[]; total: number }> {
+/** Published draws, newest first. `from` (YYYY-MM-DD) hides anything older: this is where the paid history is enforced. */
+export async function getDraws(limit: number, offset = 0, from: string | null = null): Promise<{ draws: Draw[]; total: number }> {
   if (useSample) return { draws: sampleDraws.slice(offset, offset + limit), total: sampleDraws.length };
+  const where = from ? "status='published' AND draw_date >= ?" : "status='published'";
+  const args = from ? [from] : [];
   const [rows, count] = await Promise.all([
-    query<DrawRow>("SELECT * FROM draws WHERE status='published' ORDER BY draw_date DESC, id DESC LIMIT ? OFFSET ?", [limit, offset]),
-    query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM draws WHERE status='published'"),
+    query<DrawRow>(`SELECT * FROM draws WHERE ${where} ORDER BY draw_date DESC, id DESC LIMIT ? OFFSET ?`, [...args, limit, offset]),
+    query<RowDataPacket & { n: number }>(`SELECT COUNT(*) AS n FROM draws WHERE ${where}`, args),
   ]);
   return { draws: rows.map(toDraw), total: Number(count[0].n) };
 }

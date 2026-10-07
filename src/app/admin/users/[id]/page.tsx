@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { RowDataPacket } from 'mysql2/promise';
-import { setBlockedAction, setVerifiedAction } from '@/actions/admin';
+import { setBlockedAction, setHistoryAction, setVerifiedAction } from '@/actions/admin';
 import { AdminTable, Notice, PageHeader, Panel } from '@/components/admin/ui';
 import { requireRole } from '@/lib/auth';
 import { can } from '@/lib/perms';
@@ -13,7 +13,7 @@ export default async function UserDetailPage({ params, searchParams }: { params:
   const me = await requireRole('support');
   const { ok, error } = await searchParams;
   const id = parseInt((await params).id, 10);
-  const [user] = Number.isInteger(id) ? await query<RowDataPacket & { email: string; points: number; blocked: number; email_verified: number; created_at: string; last_login_at: string | null }>('SELECT email, points, blocked, email_verified, created_at, last_login_at FROM users WHERE id=?', [id]) : [];
+  const [user] = Number.isInteger(id) ? await query<RowDataPacket & { email: string; points: number; blocked: number; email_verified: number; history_years: number; history_from: string | null; created_at: string; last_login_at: string | null }>('SELECT email, points, blocked, email_verified, history_years, history_from, created_at, last_login_at FROM users WHERE id=?', [id]) : [];
   if (!user) notFound();
   const [log, orders] = await Promise.all([
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 100', [id]),
@@ -27,6 +27,18 @@ export default async function UserDetailPage({ params, searchParams }: { params:
         <p className="text-sm text-mute">Points balance</p>
         <p className="font-mono text-3xl tabular-nums text-gold-bright">{Number(user.points)}</p>
         <p className="mt-2 text-sm text-mute">Email: {user.email_verified ? 'confirmed' : 'not confirmed yet'}</p>
+        <p className="mt-2 text-sm text-mute">
+          Older results: {Number(user.history_years) ? `${Number(user.history_years)} year${Number(user.history_years) === 1 ? '' : 's'} (since ${String(user.history_from).slice(0, 10)})` : 'only the free latest 40'}
+        </p>
+        {can(me.role, 'manage') ? (
+          <form action={setHistoryAction} className="mt-2 flex items-center gap-2">
+            <input type="hidden" name="id" value={id} />
+            <select name="years" defaultValue={Number(user.history_years)} aria-label="Years of older results" className="h-9 rounded-lg border border-line bg-night px-2 text-sm text-ivory">
+              {Array.from({ length: 10 }, (_, n) => <option key={n} value={n}>{n === 0 ? 'None' : `${n} year${n === 1 ? '' : 's'}`}</option>)}
+            </select>
+            <Button type="submit" size="sm" variant="outline">Set history access</Button>
+          </form>
+        ) : null}
         {!user.email_verified && can(me.role, 'manage') ? (
           <form action={setVerifiedAction} className="mt-2">
             <input type="hidden" name="id" value={id} />

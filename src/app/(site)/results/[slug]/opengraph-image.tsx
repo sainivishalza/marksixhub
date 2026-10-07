@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { getDrawByNo } from '@/lib/data';
+import { getHistoryAccess } from '@/lib/history';
 import { dateLabel } from '@/lib/format';
 import { ballTone } from '@/lib/mark6';
 import { isDrawSlug, slugToDrawNo } from '@/lib/types';
@@ -12,7 +13,10 @@ const TONE = { red: '#C8102E', blue: '#1F4FD8', green: '#12804A' };
 
 export default async function ResultOg({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const draw = isDrawSlug(slug) ? await getDrawByNo(slugToDrawNo(slug)) : null;
+  const found = isDrawSlug(slug) ? await getDrawByNo(slugToDrawNo(slug)) : null;
+  // Older results are paid content: their social image shows no numbers.
+  const open = await getHistoryAccess(null);
+  const draw = found && !(open.from && found.drawDate < open.from) ? found : null;
   const ball = (n: number, extra = false) => (
     <div key={`${n}-${extra}`} style={{ width: 104, height: 104, borderRadius: 52, background: TONE[ballTone(n)], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, fontWeight: 700, color: '#fff', border: extra ? '5px solid #F5C542' : '3px solid rgba(255,255,255,0.35)' }}>
       {n}
