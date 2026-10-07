@@ -2,6 +2,8 @@
 ## Doing
 - [ ] Confirm information-only scope; choose stack (needs DB for accounts + admin)
 ## Todo
+- [ ] Connect Hostinger Git deploy + point marksixhub.com + enable free SSL
+- [ ] Build plan: MySQL schema, admin login, results CRUD, public result pages, number picker, accounts, currencies
 - [ ] Write real description/title and page content
 - [ ] Add pages (update sitemap.xml each time)
 - [ ] Add PNG icons (192/512) for manifest if installable app needed

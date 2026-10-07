@@ -8,4 +8,4 @@ Static site: HTML + CSS, no build step.
     node tests/smoke.mjs
 
 ## Deploy
-Any static host (Cloudflare Pages, Netlify). Replace `marksixhub.com` everywhere with the real domain, then set real description text.
+Hostinger Git deploy (hPanel > Git) from this repo into public_html. Replace `marksixhub.com` everywhere with the real domain, then set real description text.

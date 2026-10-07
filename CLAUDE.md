@@ -13,6 +13,9 @@ marksixhub.com: information-only Hong Kong Mark Six site (results, prizes, draw 
 - Files under ~300 lines. No dead code, no duplicate logic.
 - Test or manually verify before marking a task done.
 
+## Stack
+PHP + MySQL on Hostinger shared hosting; plain HTML/CSS front end, minimal JS. Config with DB credentials stays outside public_html.
+
 ## Security
 - No secrets in code; use .env (see .env.example), never commit it.
 - Escape/validate all user input. Use HTTPS, CSP, HSTS, X-Content-Type-Options, Referrer-Policy.

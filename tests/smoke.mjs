@@ -1,6 +1,6 @@
 // Zero-dependency checks: required files, SEO tags, no inline scripts, no placeholders left on deploy.
 import { readFileSync, existsSync } from "node:fs";
-const must = ["index.html","404.html","robots.txt","sitemap.xml","_headers","styles.css","favicon.svg","manifest.webmanifest"];
+const must = ["index.html","404.html","robots.txt","sitemap.xml",".htaccess","styles.css","favicon.svg","manifest.webmanifest"];
 let fail = 0;
 const bad = (m) => { console.error("FAIL:", m); fail++; };
 for (const f of must) if (!existsSync(f)) bad(`missing ${f}`);
