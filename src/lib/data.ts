@@ -5,7 +5,7 @@ import { dbConfigured, query } from './db';
 import { FAQS, type Faq } from './faq';
 import { HKD } from './format';
 import { sampleCurrencies, sampleDraws, sampleEvents, sampleNext, samplePrizes } from './sample';
-import type { Currency, Draw, EventItem, Prize } from './types';
+import type { Currency, Draw, EventItem, Prize, TopPrize } from './types';
 
 // With no database configured, development shows sample data; production never does.
 const useSample = !dbConfigured && process.env.NODE_ENV !== 'production';
@@ -84,6 +84,23 @@ export async function getFaqs(): Promise<Faq[]> {
     console.error('faqs unavailable, using defaults:', err);
     return FAQS;
   }
+}
+
+/** Biggest prize won in each of the given draws (draws nobody won anything in are left out). */
+export async function getTopPrizes(drawIds: number[]): Promise<Record<number, TopPrize>> {
+  const out: Record<number, TopPrize> = {};
+  if (!drawIds.length) return out;
+  if (useSample) {
+    const best = samplePrizes.find((p) => p.winners > 0);
+    if (best) for (const id of drawIds) out[id] = { division: best.division, prizeHkd: best.prizeHkd };
+    return out;
+  }
+  const rows = await query<RowDataPacket & { draw_id: number; division: number; prize_hkd: number | string }>(
+    'SELECT draw_id, division, prize_hkd FROM draw_prizes WHERE draw_id IN (?) AND winners > 0 ORDER BY draw_id, division',
+    [drawIds],
+  );
+  for (const r of rows) out[r.draw_id] ??= { division: r.division, prizeHkd: Number(r.prize_hkd) };
+  return out;
 }
 
 export async function getEvents(): Promise<EventItem[]> {

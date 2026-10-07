@@ -16,6 +16,9 @@ export type Draw = {
   note: string | null;
 };
 
+/** The best prize anyone won in a draw: the highest division that had winners. */
+export type TopPrize = { division: number; prizeHkd: number };
+
 export type Prize = { division: number; winners: number; prizeHkd: number };
 
 export type Currency = { code: string; name: string; symbol: string; rate: number };

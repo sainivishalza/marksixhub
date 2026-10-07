@@ -9,7 +9,7 @@ import { ResultStub } from '@/components/result-stub';
 import { ResultsTable } from '@/components/results-table';
 import { getUser } from '@/lib/auth';
 import { walletFor } from '@/lib/points';
-import { getCurrentCurrency, getDraws, getEvents, getFaqs, getLatestDraw, getNextDraw, getPrizes } from '@/lib/data';
+import { getCurrentCurrency, getDraws, getEvents, getFaqs, getLatestDraw, getNextDraw, getPrizes, getTopPrizes } from '@/lib/data';
 import { dateLabel } from '@/lib/format';
 import { seoMetadata } from '@/lib/seo-db';
 import { getSettings } from '@/lib/settings';
@@ -39,7 +39,7 @@ export default async function HomePage() {
     getUser(),
     getSettings(),
   ]);
-  const prizes = latest ? await getPrizes(latest.id) : [];
+  const [prizes, tops] = await Promise.all([latest ? getPrizes(latest.id) : Promise.resolve([]), getTopPrizes(recent.draws.map((d) => d.id))]);
 
   return (
     <>
@@ -144,7 +144,7 @@ export default async function HomePage() {
           <h2 className="text-3xl">Recent results</h2>
           <Link href="/results" className="text-gold-bright underline-offset-4 hover:underline">All results</Link>
         </div>
-        <ResultsTable draws={recent.draws} />
+        <ResultsTable draws={recent.draws} tops={tops} currency={current} />
       </section>
 
       <section className="mx-auto mt-24 max-w-3xl px-4 sm:px-6 lg:px-8">
