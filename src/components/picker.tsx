@@ -100,7 +100,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
     stopTimers();
     const base = mode === 'single' && sel.length < PICK ? sel : [];
     const full = quickPick(base);
-    const added = full.slice(base.length);
+    const added = sortAsc(full.slice(base.length)); // revealed low to high, so each ball lands in the slot it keeps
     const done = () => setStatus(`Quick pick: ${sortAsc(full).join(', ')}.`);
     if (reduce) {
       setSel(full);
@@ -323,7 +323,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       </div>
       {mode === 'multiple' ? (
         <p className="mb-3 text-sm text-mute">
-          Pick 6 numbers, then 6 more, and so on. Each set of 6 becomes one ticket on your slip (up to {MAX_ORDER}).
+          Pick 6 numbers, then 6 more, and so on, or press Quick pick for a random ticket. Each set of 6 becomes one ticket on your slip (up to {MAX_ORDER}).
         </p>
       ) : null}
 
@@ -384,17 +384,17 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       </div>
 
       <div className="mt-5 rounded-xl border border-dashed border-gold/40 bg-night/60 p-3 sm:p-4" aria-label="Your ticket">
-        <div className="flex min-h-[3.75rem] flex-wrap items-center justify-between gap-1.5">
-          {Array.from({ length: Math.max(PICK, sorted.length) }, (_, i) => {
+        <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+          {Array.from({ length: PICK }, (_, i) => {
             const n = sorted[i];
             return (
-              <div key={i} className="grid h-12 w-12 place-items-center rounded-full border border-dashed border-line sm:h-14 sm:w-14">
+              <div key={i} className="grid aspect-square w-full place-items-center rounded-full border border-dashed border-line">
                 <AnimatePresence initial={false}>
                   {n ? (
                     <motion.span
                       key={n}
-                      className={cn(ballClass(n), 'h-11 w-11 text-base sm:h-12 sm:w-12 sm:text-lg')}
-                      initial={reduce ? false : { y: -26, scale: 0.4, opacity: 0 }}
+                      className={cn(ballClass(n), 'h-[90%] w-[90%] text-sm sm:text-lg')}
+                      initial={reduce ? false : { y: -10, scale: 0.5, opacity: 0 }}
                       animate={{ y: 0, scale: 1, opacity: 1 }}
                       exit={reduce ? undefined : { scale: 0.4, opacity: 0 }}
                       transition={{ type: 'spring', stiffness: 420, damping: 18 }}
@@ -419,6 +419,12 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
           <Sparkles aria-hidden className="h-4 w-4" />
           {complete ? 'Pick again' : sel.length ? 'Fill the rest' : 'Quick pick'}
         </Button>
+        ) : null}
+        {mode === 'multiple' ? (
+          <Button onClick={() => addSet(sortAsc(quickPick(sel)))}>
+            <Sparkles aria-hidden className="h-4 w-4" />
+            {sel.length ? 'Fill the rest and add' : 'Quick pick a ticket'}
+          </Button>
         ) : null}
         {mode !== 'quick' ? (
           <>
