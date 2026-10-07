@@ -28,6 +28,9 @@ export function dateLabel(iso: string, opts: Intl.DateTimeFormatOptions = {}): s
 export const DRAW_TIME = '21:30:00+08:00';
 export const drawMoment = (iso: string) => `${iso}T${DRAW_TIME}`;
 
+/** Winning units come in tenths (2.5, 4,085.2, 283.0); zero means nobody won that prize. */
+export const unitsLabel = (n: number) => (n > 0 ? n.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '-');
+
 /** "21:15" becomes "9:15 PM". */
 export function timeLabel(hhmm: string | null): string {
   const m = /^(\d{2}):(\d{2})/.exec(hhmm ?? '');

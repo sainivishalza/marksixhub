@@ -69,7 +69,7 @@ export async function getPrizes(drawId: number): Promise<Prize[]> {
     'SELECT division, winners, prize_hkd FROM draw_prizes WHERE draw_id=? ORDER BY division',
     [drawId],
   );
-  return rows.map((r) => ({ division: r.division, winners: r.winners, prizeHkd: Number(r.prize_hkd) }));
+  return rows.map((r) => ({ division: r.division, winners: Number(r.winners), prizeHkd: Number(r.prize_hkd) }));
 }
 
 /** Admin-managed FAQ entries, or the built-in defaults when none exist yet. */

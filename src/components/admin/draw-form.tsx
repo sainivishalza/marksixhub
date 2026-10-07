@@ -82,7 +82,7 @@ export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: 
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] text-left text-sm">
               <thead className="text-mute">
-                <tr><th scope="col" className="py-2 pr-3 font-medium">Prize</th><th scope="col" className="py-2 pr-3 font-medium">Match</th><th scope="col" className="py-2 pr-3 font-medium">Winners</th><th scope="col" className="py-2 font-medium">Prize per unit (HK$)</th></tr>
+                <tr><th scope="col" className="py-2 pr-3 font-medium">Prize</th><th scope="col" className="py-2 pr-3 font-medium">Match</th><th scope="col" className="py-2 pr-3 font-medium">Winning units</th><th scope="col" className="py-2 font-medium">Prize per unit (HK$)</th></tr>
               </thead>
               <tbody>
                 {DIVISION_LABEL.map((label, i) => {
@@ -91,7 +91,7 @@ export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: 
                     <tr key={label} className="border-t border-line/40">
                       <th scope="row" className="py-2 pr-3 font-serif text-base font-medium text-gold-bright">{label}</th>
                       <td className="py-2 pr-3 text-mute">{DIVISION_RULE[i]}</td>
-                      <td className="py-2 pr-3"><input name={`w${n}`} inputMode="numeric" aria-label={`Winners, ${label} prize`} defaultValue={val(`w${n}`, prize(n)?.winners ?? 0)} className={`${money} w-28`} /></td>
+                      <td className="py-2 pr-3"><input name={`w${n}`} inputMode="decimal" aria-label={`Winning units, ${label} prize`} defaultValue={val(`w${n}`, prize(n)?.winners ?? 0)} className={`${money} w-28`} /></td>
                       <td className="py-2"><input name={`p${n}`} inputMode="numeric" aria-label={`Prize per unit, ${label} prize`} defaultValue={val(`p${n}`, prize(n)?.prizeHkd ?? 0)} className={`${money} w-40`} /></td>
                     </tr>
                   );
@@ -99,7 +99,7 @@ export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: 
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-mute">Prizes are saved only for a published result. Use 0 for a division with no winner.</p>
+          <p className="mt-3 text-xs text-mute">Prizes are saved only for a published result. Winning units can have one decimal, like 2.5. Use 0 for a division with no winner.</p>
         </Panel>
 
         <div className="flex gap-3">

@@ -10,3 +10,6 @@ build/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Local data files, not for the repo
+import/

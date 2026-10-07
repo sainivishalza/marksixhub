@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { BallRow } from '@/components/ball';
 import { CheckTicket } from '@/components/check-ticket';
 import { DIVISION_LABEL, DIVISION_RULE } from '@/lib/mark6';
-import { dateLabel, money } from '@/lib/format';
+import { dateLabel, money, unitsLabel } from '@/lib/format';
 import { drawSlug, type Currency, type Draw, type Prize } from '@/lib/types';
 
 type Props = { draw: Draw; prizes: Prize[]; currency: Currency; heading?: 'h1' | 'h2'; link?: boolean };
@@ -24,7 +24,12 @@ export function ResultStub({ draw, prizes, currency, heading = 'h2', link = true
         <p className="mt-2 text-sm text-mute">Six winning numbers, then the extra number.</p>
       </div>
 
-      {draw.note ? <p className="mt-4 text-mute">{draw.note}</p> : null}
+      {draw.turnoverHkd !== null ? (
+        <p className="mt-4 text-mute">
+          Total turnover <span className="font-mono tabular-nums text-ivory">{money(draw.turnoverHkd, currency)}</span>
+        </p>
+      ) : null}
+      {draw.note ? <p className="mt-2 text-mute">{draw.note}</p> : null}
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[30rem] text-left text-sm">
@@ -33,7 +38,7 @@ export function ResultStub({ draw, prizes, currency, heading = 'h2', link = true
             <tr className="border-b border-line text-mute">
               <th scope="col" className="py-2 pr-3 font-medium">Prize</th>
               <th scope="col" className="py-2 pr-3 font-medium">Match</th>
-              <th scope="col" className="py-2 pr-3 text-right font-medium">Winners</th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium">Winning units</th>
               <th scope="col" className="py-2 text-right font-medium">Per winning unit ({currency.code})</th>
             </tr>
           </thead>
@@ -42,7 +47,7 @@ export function ResultStub({ draw, prizes, currency, heading = 'h2', link = true
               <tr key={p.division} className="border-b border-line/50">
                 <th scope="row" className="py-2.5 pr-3 font-serif text-base font-medium text-gold-bright">{DIVISION_LABEL[p.division - 1]}</th>
                 <td className="py-2.5 pr-3 text-mute">{DIVISION_RULE[p.division - 1]}</td>
-                <td className="py-2.5 pr-3 text-right font-mono tabular-nums">{p.winners.toLocaleString('en')}</td>
+                <td className="py-2.5 pr-3 text-right font-mono tabular-nums">{unitsLabel(p.winners)}</td>
                 <td className="py-2.5 text-right font-mono tabular-nums">{p.prizeHkd ? money(p.prizeHkd, currency) : 'No winner'}</td>
               </tr>
             ))}

@@ -79,7 +79,7 @@ export async function getDrawFull(id: number): Promise<{ draw: Draw; prizes: Pri
     'SELECT division, winners, prize_hkd FROM draw_prizes WHERE draw_id=? ORDER BY division',
     [id],
   );
-  return { draw: toDraw(rows[0]), prizes: prizes.map((p) => ({ division: p.division, winners: p.winners, prizeHkd: num(p.prize_hkd) })) };
+  return { draw: toDraw(rows[0]), prizes: prizes.map((p) => ({ division: p.division, winners: num(p.winners), prizeHkd: num(p.prize_hkd) })) };
 }
 
 export async function listAllEvents(): Promise<(EventItem & { active: boolean })[]> {
