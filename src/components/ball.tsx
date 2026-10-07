@@ -1,7 +1,7 @@
 import { ballTone } from '@/lib/mark6';
 import { cn } from '@/lib/utils';
 
-const SIZE = { sm: 'h-8 w-8 text-xs', md: 'h-11 w-11 text-base', lg: 'h-14 w-14 text-xl' } as const;
+const SIZE = { sm: 'h-8 w-8 text-xs', md: 'h-11 w-11 text-base', lg: 'h-14 w-14 text-xl', fluid: 'h-9 w-9 text-sm sm:h-14 sm:w-14 sm:text-xl' } as const;
 
 // Written out in full so Tailwind can see every class name (it cannot read `ball-${tone}`).
 const TONE_CLASS = { red: 'ball ball-red', blue: 'ball ball-blue', green: 'ball ball-green' } as const;
@@ -28,13 +28,13 @@ export function NumberBall({ n, size = 'md', extra = false, className }: Props) 
 
 export function BallRow({ numbers, extra, size = 'md' }: { numbers: number[]; extra?: number | null; size?: keyof typeof SIZE }) {
   return (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Winning numbers">
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2" role="group" aria-label="Winning numbers">
       {numbers.map((n) => (
         <NumberBall key={n} n={n} size={size} />
       ))}
       {extra ? (
         <>
-          <span aria-hidden className="mx-1 font-mono text-gold">+</span>
+          <span aria-hidden className="mx-0.5 font-mono text-gold sm:mx-1">+</span>
           <NumberBall n={extra} size={size} extra />
         </>
       ) : null}

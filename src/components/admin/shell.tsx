@@ -83,6 +83,7 @@ export function AdminShell({ user, children }: { user: { email: string; role: Ro
             </summary>
             <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-line bg-panel p-1 shadow-panel">
               <Link href="/" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-mute hover:bg-raised hover:text-ivory"><Globe aria-hidden className="h-4 w-4" />View site</Link>
+              <a href="/preview?on=1&next=/results" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-mute hover:bg-raised hover:text-ivory"><Globe aria-hidden className="h-4 w-4" />Preview as customer</a>
               <Link href="/account" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-mute hover:bg-raised hover:text-ivory"><Users aria-hidden className="h-4 w-4" />My account</Link>
               <form action={logoutAction}>
                 <button type="submit" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-mute hover:bg-raised hover:text-ivory"><LogOut aria-hidden className="h-4 w-4" />Log out</button>

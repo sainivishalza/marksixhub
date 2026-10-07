@@ -5,9 +5,9 @@ import type { Currency, Draw } from '@/lib/types';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-line/40 py-3">
-      <dt className="text-mute">{label}</dt>
-      <dd className="text-right font-mono tabular-nums text-ivory">{children}</dd>
+    <div className="border-b border-line/40 py-3 sm:flex sm:items-baseline sm:justify-between sm:gap-4">
+      <dt className="text-sm text-mute sm:text-base">{label}</dt>
+      <dd className="mt-0.5 font-mono tabular-nums text-ivory sm:mt-0 sm:text-right">{children}</dd>
     </div>
   );
 }
@@ -27,7 +27,7 @@ export function NextDrawPanel({ draw, currency, showPrizes = true }: { draw: Dra
           <Row label="Draw date">
             <time dateTime={draw.drawDate}>{dateLong(draw.drawDate)}</time>
           </Row>
-          <Row label="Stop selling time">{draw.stopSelling ? `${timeLabel(draw.stopSelling)} (Hong Kong time)` : pending}</Row>
+          <Row label="Stop selling time">{draw.stopSelling ? <>{timeLabel(draw.stopSelling)} <span className="font-sans text-xs text-mute">Hong Kong time</span></> : pending}</Row>
           <Row label="Turnover">{amount(draw.turnoverHkd)}</Row>
         </dl>
 
@@ -35,8 +35,8 @@ export function NextDrawPanel({ draw, currency, showPrizes = true }: { draw: Dra
           <dl>
             <Row label="Jackpot / Snowball">{amount(draw.snowballHkd)}</Row>
             <div className="border-b border-line/40 py-3">
-              <dt className="text-mute">Estimated 1st division prize</dt>
-              <dd className="mt-1 text-right">
+              <dt className="text-sm text-mute sm:text-base">Estimated 1st division prize</dt>
+              <dd className="mt-1 sm:text-right">
                 {draw.estJackpotHkd > 0 ? (
                   <span className="gold-text font-serif text-4xl font-semibold tabular-nums sm:text-5xl">{money(draw.estJackpotHkd, currency)}</span>
                 ) : (
