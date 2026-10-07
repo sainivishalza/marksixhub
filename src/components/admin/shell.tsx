@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 const NAV: { href: string; label: string; icon: typeof Gauge; level: Level }[] = [
   { href: '/admin', label: 'Dashboard', icon: Gauge, level: 'view' },
   { href: '/admin/draws', label: 'Draws', icon: Ticket, level: 'view' },
+  { href: '/admin/orders', label: 'Orders', icon: Ticket, level: 'view' },
   { href: '/admin/events', label: 'Events', icon: CalendarDays, level: 'view' },
   { href: '/admin/faqs', label: 'Content', icon: HelpCircle, level: 'content' },
   { href: '/admin/seo', label: 'SEO', icon: FileText, level: 'content' },

@@ -66,3 +66,20 @@ export const DIVISION_RULE = [
   '3 winning numbers + the extra number',
   '3 winning numbers',
 ];
+
+/** Largest "multiple entry": 12 numbers = 924 combinations of 6. */
+export const MAX_MULTI = 12;
+
+/** All k-sized combinations of `nums` (ascending). */
+export function combinations(nums: number[], k = 6): number[][] {
+  const out: number[][] = [];
+  const walk = (start: number, cur: number[]) => {
+    if (cur.length === k) return void out.push([...cur]);
+    for (let i = start; i < nums.length; i++) walk(i + 1, [...cur, nums[i]]);
+  };
+  walk(0, []);
+  return out;
+}
+
+/** How many 6-number tickets a single or multiple entry of `count` numbers is worth: C(count, 6). */
+export const ticketUnits = (count: number) => (count < 6 ? 0 : combinations(Array.from({ length: count }, (_, i) => i), 6).length);

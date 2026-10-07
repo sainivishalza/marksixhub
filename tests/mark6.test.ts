@@ -55,3 +55,13 @@ test('money converts from HKD and dates are stable', () => {
   assert.match(money(100, { code: 'INR', name: 'Rupee', symbol: '₹', rate: 11.4 }), /1,140/);
   assert.equal(dateLabel('2026-10-07'), 'Wed, 7 Oct 2026');
 });
+
+test('multiple entries: combination counts and units', async () => {
+  const { combinations, ticketUnits } = await import('../src/lib/mark6.ts');
+  assert.equal(ticketUnits(6), 1);
+  assert.equal(ticketUnits(7), 7);
+  assert.equal(ticketUnits(12), 924);
+  const c = combinations([1, 2, 3, 4, 5, 6, 7]);
+  assert.equal(c.length, 7);
+  assert.ok(c.every((x) => x.length === 6 && new Set(x).size === 6));
+});

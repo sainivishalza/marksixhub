@@ -1,7 +1,7 @@
 import 'server-only';
 import type { RowDataPacket } from 'mysql2/promise';
 import { query, tx } from './db';
-import { evaluate, parseNumbers } from './mark6';
+import { combinations, evaluate, parseNumbers } from './mark6';
 import { getSettings } from './settings';
 
 // Points are free play credits: never sold, never redeemable for money. Every change is logged in point_log.
@@ -29,8 +29,12 @@ export async function settleTickets() {
        JOIN draws d ON d.draw_no = s.draw_no AND d.status='published' AND d.nums IS NOT NULL WHERE s.settled=0`,
   );
   for (const r of rows) {
-    const { division } = evaluate(parseNumbers(r.nums), parseNumbers(r.w), r.extra);
-    const won = division ? prizePoints[division - 1] ?? 0 : 0;
+    // A multiple entry wins on every 6-number combination inside it.
+    const winning = parseNumbers(r.w);
+    const won = combinations(parseNumbers(r.nums)).reduce((sum, c) => {
+      const { division } = evaluate(c, winning, r.extra);
+      return sum + (division ? prizePoints[division - 1] ?? 0 : 0);
+    }, 0);
     await tx(async (t) => {
       const res = await t.exec('UPDATE saved_sets SET settled=1, won_points=? WHERE id=? AND settled=0', [won, r.id]);
       if (res.affectedRows && won > 0) {

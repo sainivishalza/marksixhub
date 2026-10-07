@@ -107,13 +107,38 @@ export async function listAllFaqs() {
   return rows.map((r) => ({ id: r.id, question: r.question, answer: r.answer, sortOrder: r.sort_order, active: Boolean(r.active) }));
 }
 
-export type DrawTicket = { id: number; email: string; nums: string; createdAt: string };
+export type OrderRow = { id: number; email: string; createdAt: string; points: number; tickets: { nums: string; units: number; won: number | null }[] };
 
-/** Tickets users saved for one draw (information only, no payments). */
-export async function listDrawTickets(drawNo: string): Promise<DrawTicket[]> {
-  const rows = await query<RowDataPacket & { id: number; email: string; nums: string; created_at: string }>(
-    'SELECT s.id, u.email, s.nums, s.created_at FROM saved_sets s JOIN users u ON u.id = s.user_id WHERE s.draw_no=? ORDER BY s.id DESC LIMIT 1000',
-    [drawNo],
+/** Everything users placed for one draw: orders (newest first) and how often each number was picked. */
+export async function getDrawOrders(drawNo: string) {
+  const [orders, tickets] = await Promise.all([
+    query<RowDataPacket & { id: number; email: string; created_at: string; points: number }>(
+      'SELECT o.id, u.email, o.created_at, o.points FROM orders o JOIN users u ON u.id = o.user_id WHERE o.draw_no=? ORDER BY o.id DESC LIMIT 500',
+      [drawNo],
+    ),
+    query<RowDataPacket & { order_id: number; nums: string; units: number; settled: number; won_points: number }>(
+      'SELECT order_id, nums, units, settled, won_points FROM saved_sets WHERE draw_no=? AND order_id IS NOT NULL ORDER BY id',
+      [drawNo],
+    ),
+  ]);
+  const byOrder = new Map<number, OrderRow['tickets']>();
+  const freq: number[] = Array(50).fill(0);
+  for (const t of tickets) {
+    for (const n of t.nums.split(',')) freq[Number(n)] += 1;
+    const list = byOrder.get(t.order_id) ?? [];
+    list.push({ nums: t.nums, units: num(t.units), won: t.settled ? num(t.won_points) : null });
+    byOrder.set(t.order_id, list);
+  }
+  return {
+    orders: orders.map((o): OrderRow => ({ id: o.id, email: o.email, createdAt: String(o.created_at), points: num(o.points), tickets: byOrder.get(o.id) ?? [] })),
+    freq,
+    ticketCount: tickets.reduce((a, t) => a + num(t.units), 0),
+  };
+}
+
+export async function listDrawNos(): Promise<{ drawNo: string; status: string; nums: string | null; extra: number | null }[]> {
+  const rows = await query<RowDataPacket & { draw_no: string; status: string; nums: string | null; extra: number | null }>(
+    'SELECT draw_no, status, nums, extra FROM draws ORDER BY draw_date DESC, id DESC LIMIT 60',
   );
-  return rows.map((r) => ({ id: r.id, email: r.email, nums: r.nums, createdAt: String(r.created_at) }));
+  return rows.map((r) => ({ drawNo: r.draw_no, status: r.status, nums: r.nums, extra: r.extra }));
 }

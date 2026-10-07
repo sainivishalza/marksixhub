@@ -66,6 +66,17 @@ const TABLES = [
     KEY idx_user (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    draw_no VARCHAR(8) NOT NULL,
+    tickets INT NOT NULL,
+    points INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_draw (draw_no),
+    KEY idx_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS settings (
     k VARCHAR(40) PRIMARY KEY,
     v TEXT NOT NULL
@@ -137,6 +148,10 @@ export async function migrate() {
   if (!(await hasColumn('saved_sets', 'settled'))) {
     await exec('ALTER TABLE saved_sets ADD COLUMN settled TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN won_points INT NOT NULL DEFAULT 0');
     await exec('UPDATE saved_sets SET settled=1'); // tickets saved before points existed never pay
+  }
+
+  if (!(await hasColumn('saved_sets', 'order_id'))) {
+    await exec('ALTER TABLE saved_sets MODIFY nums VARCHAR(40) NOT NULL, ADD COLUMN order_id INT NULL, ADD COLUMN units INT NOT NULL DEFAULT 1, ADD KEY idx_order (order_id)');
   }
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
