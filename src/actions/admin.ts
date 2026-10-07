@@ -8,6 +8,7 @@ import { bustCurrencies } from '@/lib/data';
 import { exec, query, tx, type Tx } from '@/lib/db';
 import { audit } from '@/lib/audit';
 import { markVerified } from '@/lib/verify';
+import { notifyOrders } from '@/lib/order-mail';
 import { addPoints, reversePayouts, settleTickets } from '@/lib/points';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
@@ -303,6 +304,7 @@ export async function approveOrderAction(fd: FormData) {
   const res = await exec("UPDATE orders SET status='accepted' WHERE id=? AND status='pending' AND refunded=0", [id]);
   if (!res.affectedRows) back(ordersPath(drawNo), 'error', 'That order is not waiting for approval.');
   const no = await orderLabel(id);
+  notifyOrders('accepted', [id]);
   await audit(me.id, 'order.approve', `order ${no}, draw ${drawNo}`);
   back(ordersPath(drawNo), 'ok', `Order ${no} approved. The buyer can now download the receipt.`);
 }
@@ -310,7 +312,9 @@ export async function approveOrderAction(fd: FormData) {
 export async function approveAllAction(fd: FormData) {
   const me = await requireRole('support');
   const drawNo = str(fd, 'draw');
+  const waiting = await query<RowDataPacket & { id: number }>("SELECT id FROM orders WHERE draw_no=? AND status='pending' AND refunded=0", [drawNo]);
   const res = await exec("UPDATE orders SET status='accepted' WHERE draw_no=? AND status='pending' AND refunded=0", [drawNo]);
+  notifyOrders('accepted', waiting.map((o) => o.id));
   await audit(me.id, 'order.approve_all', `${res.affectedRows} orders, draw ${drawNo}`);
   back(ordersPath(drawNo), 'ok', `${res.affectedRows} orders approved.`);
 }
@@ -335,6 +339,7 @@ export async function refundOrderAction(fd: FormData) {
   });
   if (!done) back(ordersPath(drawNo), 'error', 'That order cannot be changed (already refunded, or its draw is published).');
   const no = await orderLabel(id);
+  if (reject) notifyOrders('rejected', [id]);
   await audit(me.id, reject ? 'order.reject' : 'order.refund', `order ${no}, draw ${drawNo}`);
   back(ordersPath(drawNo), 'ok', reject ? `Order ${no} rejected and the points returned.` : `Order ${no} refunded.`);
 }
