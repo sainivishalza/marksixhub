@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { RowDataPacket } from 'mysql2/promise';
-import { clientIp, createSession, destroySession, getUser, requireUser, touchLogin } from '@/lib/auth';
+import { clientIp, createSession, destroySession, getUser, ipHash, requireUser, touchLogin } from '@/lib/auth';
 import { dbConfigured, exec, query, tx } from '@/lib/db';
 import { isBall, MAX_MULTI, sortAsc, ticketUnits } from '@/lib/mark6';
 import { can } from '@/lib/perms';
@@ -31,11 +31,18 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
 
   const email = text(fd, 'email').trim().toLowerCase().slice(0, 190);
   const password = text(fd, 'password').slice(0, 200);
+  // Lock the account (any email, so this reveals nothing) after 5 failures in 15 minutes.
+  const [fails] = await query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM login_fails WHERE email=? AND created_at > UTC_TIMESTAMP() - INTERVAL 15 MINUTE", [email]);
+  if (Number(fails.n) >= 5) return { error: 'Too many failed attempts for this account. Try again in 15 minutes.', email };
   const [user] = await query<UserRow>('SELECT id, pass_hash, role, blocked FROM users WHERE email=?', [email]);
   const ok = user ? await verifyPassword(password, user.pass_hash) : (await verifyPassword(password, DUMMY_HASH), false);
-  if (!ok || !user) return { error: 'Wrong email or password.', email };
+  if (!ok || !user) {
+    await exec('INSERT INTO login_fails (email, ip) VALUES (?,?)', [email, (await clientIp()).slice(0, 64)]);
+    return { error: 'Wrong email or password.', email };
+  }
   if (user.blocked) return { error: 'This account has been suspended.', email };
 
+  await exec('DELETE FROM login_fails WHERE email=?', [email]);
   await createSession(user.id, user.pass_hash);
   await touchLogin(user.id);
   const next = text(fd, 'next');
@@ -56,12 +63,17 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
 
   const currency = (await cookies()).get('cur')?.value;
   const hash = await hashPassword(password);
-  const { signupPoints } = await getSettings();
-  const { insertId } = await exec('INSERT INTO users (email, pass_hash, currency, points, last_login_at) VALUES (?,?,?,?,UTC_TIMESTAMP())', [
+  const settings = await getSettings();
+  // Welcome points go to the first 3 accounts per address per day; the rest can still sign up, without the bonus.
+  const ip = ipHash(await clientIp());
+  const [recent] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM users WHERE signup_ip=? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY', [ip]);
+  const signupPoints = Number(recent.n) < 3 ? settings.signupPoints : 0;
+  const { insertId } = await exec('INSERT INTO users (email, pass_hash, currency, points, signup_ip, last_login_at) VALUES (?,?,?,?,?,UTC_TIMESTAMP())', [
     email,
     hash,
     currency && /^[A-Z]{3}$/.test(currency) ? currency : 'HKD',
     signupPoints,
+    ip,
   ]);
   if (signupPoints) await exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [insertId, signupPoints, 'Welcome points']);
   await createSession(insertId, hash);

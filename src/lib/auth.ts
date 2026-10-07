@@ -80,3 +80,6 @@ export async function clientIp(): Promise<string> {
   const h = await headers();
   return (h.get('x-forwarded-for')?.split(',')[0] || h.get('x-real-ip') || 'unknown').trim();
 }
+
+/** One-way fingerprint of an address, so sign-ups from the same place can be counted without storing the address itself. */
+export const ipHash = (ip: string) => createHash('sha256').update(`${process.env.SESSION_SECRET ?? 'dev'}|${ip}`).digest('hex').slice(0, 32);

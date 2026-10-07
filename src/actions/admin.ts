@@ -7,7 +7,7 @@ import { parseCsv } from '@/lib/csv';
 import { bustCurrencies } from '@/lib/data';
 import { exec, query, tx, type Tx } from '@/lib/db';
 import { audit } from '@/lib/audit';
-import { addPoints, settleTickets } from '@/lib/points';
+import { addPoints, reversePayouts, settleTickets } from '@/lib/points';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
 import { SEO_DEFAULTS } from '@/lib/seo-db';
@@ -61,6 +61,10 @@ export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promis
   if (errors.length) return { errors, raw, n: Date.now() };
 
   const id = int(fd, 'id');
+  const [old] = await query<RowDataPacket & { nums: string | null; extra: number | null }>('SELECT nums, extra FROM draws WHERE draw_no=?', [value.drawNo]);
+  const newNums = value.status === 'published' ? [...value.numbers].sort((a, b) => a - b).join(',') : null;
+  const newExtra = value.status === 'published' ? value.extra : null;
+  const changed = Boolean(old) && (old.nums !== newNums || old.extra !== newExtra);
   try {
     await tx(async (t) => {
       let drawId = id;
@@ -75,8 +79,9 @@ export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promis
     if ((err as { code?: string }).code === 'ER_DUP_ENTRY') return { errors: ['That draw number already exists.'], raw, n: Date.now() };
     throw err;
   }
+  const undone = changed ? await reversePayouts(value.drawNo) : 0;
   await settleTickets();
-  await audit(me.id, 'draw.save', `${value.drawNo} (${value.status})`);
+  await audit(me.id, 'draw.save', `${value.drawNo} (${value.status})${changed ? `, result changed, ${undone} payouts reversed and re-paid` : ''}`);
   back('/admin/draws', 'ok', `Draw ${value.drawNo} saved.`);
   return {};
 }
@@ -88,8 +93,9 @@ export async function toggleDrawStatusAction(fd: FormData) {
   if (!d) back('/admin/draws', 'error', 'Draw not found.');
   if (d.status === 'published') {
     await exec("UPDATE draws SET status='upcoming' WHERE id=?", [id]);
-    await audit(me.id, 'draw.unpublish', d.draw_no);
-    back('/admin/draws', 'ok', `Draw ${d.draw_no} is now a draft (hidden from the public).`);
+    const undone = await reversePayouts(d.draw_no);
+    await audit(me.id, 'draw.unpublish', `${d.draw_no}, ${undone} payouts reversed`);
+    back('/admin/draws', 'ok', `Draw ${d.draw_no} is now a draft (hidden from the public).${undone ? ` Points paid to ${undone} users were taken back.` : ''}`);
   }
   if (!d.nums || !d.extra) back('/admin/draws', 'error', `Draw ${d.draw_no} has no winning numbers yet. Edit it first.`);
   await exec("UPDATE draws SET status='published' WHERE id=?", [id]);

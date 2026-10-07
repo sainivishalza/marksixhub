@@ -56,6 +56,17 @@ test('money converts from HKD and dates are stable', () => {
   assert.equal(dateLabel('2026-10-07'), 'Wed, 7 Oct 2026');
 });
 
+test('numberStats counts draws and gaps, newest first', async () => {
+  const { numberStats } = await import('../src/lib/stats.ts');
+  const s = numberStats([{ numbers: [1, 2, 3, 4, 5, 6] }, { numbers: [1, 7, 8, 9, 10, 11] }, { numbers: [12, 13, 14, 15, 16, 17] }]);
+  assert.equal(s[0].count, 2);
+  assert.equal(s[0].gap, 0);
+  assert.equal(s[6].gap, 1);
+  assert.equal(s[11].gap, 2);
+  assert.equal(s[48].count, 0);
+  assert.equal(s[48].gap, 3);
+});
+
 test('multiple entries: combination counts and units', async () => {
   const { combinations, ticketUnits } = await import('../src/lib/mark6.ts');
   assert.equal(ticketUnits(6), 1);

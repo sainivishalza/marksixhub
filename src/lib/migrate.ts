@@ -92,6 +92,13 @@ const TABLES = [
     KEY idx_user (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS login_fails (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(190) NOT NULL,
+    ip VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_email_time (email, created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS settings (
     k VARCHAR(40) PRIMARY KEY,
     v TEXT NOT NULL
@@ -179,6 +186,8 @@ export async function migrate() {
 
   if (!(await hasColumn('users', 'streak'))) await exec('ALTER TABLE users ADD COLUMN streak INT NOT NULL DEFAULT 0');
   if (!(await hasColumn('users', 'nickname'))) await exec('ALTER TABLE users ADD COLUMN nickname VARCHAR(20) NULL, ADD UNIQUE KEY uq_nickname (nickname)');
+
+  if (!(await hasColumn('users', 'signup_ip'))) await exec('ALTER TABLE users ADD COLUMN signup_ip CHAR(32) NULL, ADD KEY idx_signup_ip (signup_ip)');
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);

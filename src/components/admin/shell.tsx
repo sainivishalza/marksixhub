@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
-import { CalendarDays, History, ChevronsLeft, ChevronsRight, CircleDollarSign, FileText, Gauge, Globe, HelpCircle, LogOut, Search, Settings, Ticket, Users } from 'lucide-react';
+import { CalendarDays, History, ShieldAlert, Scale, ChevronsLeft, ChevronsRight, CircleDollarSign, FileText, Gauge, Globe, HelpCircle, LogOut, Search, Settings, Ticket, Users } from 'lucide-react';
 import { logoutAction } from '@/actions/account';
 import { can, type Level, type Role } from '@/lib/perms';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,8 @@ const NAV: { href: string; label: string; icon: typeof Gauge; level: Level }[] =
   { href: '/admin/seo', label: 'SEO', icon: FileText, level: 'content' },
   { href: '/admin/users', label: 'Users', icon: Users, level: 'manage' },
   { href: '/admin/audit', label: 'Audit log', icon: History, level: 'manage' },
+  { href: '/admin/logins', label: 'Failed logins', icon: ShieldAlert, level: 'manage' },
+  { href: '/admin/points-check', label: 'Points check', icon: Scale, level: 'manage' },
   { href: '/admin/currencies', label: 'Currencies', icon: CircleDollarSign, level: 'manage' },
   { href: '/admin/settings', label: 'Settings', icon: Settings, level: 'manage' },
 ];

@@ -36,7 +36,7 @@ export async function settleTickets() {
       return sum + (division ? prizePoints[division - 1] ?? 0 : 0);
     }, 0);
     await tx(async (t) => {
-      const res = await t.exec('UPDATE saved_sets SET settled=1, won_points=? WHERE id=? AND settled=0', [won, r.id]);
+      const res = await t.exec('UPDATE saved_sets SET settled=1, won_points=?, notified=0 WHERE id=? AND settled=0', [won, r.id]);
       if (res.affectedRows && won > 0) {
         await t.exec('UPDATE users SET points = points + ? WHERE id=?', [won, r.user_id]);
         await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [r.user_id, won, `Won, draw ${r.draw_no}`]);
@@ -73,4 +73,20 @@ export async function walletFor(userId: number, cost: number) {
     favourites: favs.map((f) => ({ id: f.id, nums: f.nums.split(',').map(Number) })),
     unseenWins: Number(w?.n) || 0,
   };
+}
+
+/** Takes back every payout for a draw and marks its tickets unsettled, so a corrected result pays fresh. Balances may go below zero if points were spent. */
+export async function reversePayouts(drawNo: string): Promise<number> {
+  return tx(async (t) => {
+    const rows = await t.query<RowDataPacket & { user_id: number; total: number }>(
+      'SELECT user_id, SUM(won_points) AS total FROM saved_sets WHERE draw_no=? AND settled=1 AND won_points>0 GROUP BY user_id',
+      [drawNo],
+    );
+    for (const r of rows) {
+      await t.exec('UPDATE users SET points = points - ? WHERE id=?', [Number(r.total), r.user_id]);
+      await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [r.user_id, -Number(r.total), `Win reversed, draw ${drawNo}`]);
+    }
+    await t.exec('UPDATE saved_sets SET settled=0, won_points=0, notified=1 WHERE draw_no=? AND settled=1', [drawNo]);
+    return rows.length;
+  });
 }

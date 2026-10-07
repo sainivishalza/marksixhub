@@ -31,6 +31,12 @@ export const SEO_DEFAULTS: Record<string, Seo & { label: string }> = {
     title: 'How to Play Mark Six: Rules and Prize Divisions',
     description: 'Mark Six explained in plain words: pick 6 numbers from 1 to 49, how the extra number works and what each of the 7 prize divisions needs.',
   },
+  '/statistics': {
+    label: 'Statistics',
+    path: '/statistics',
+    title: 'Mark Six Number Statistics: Hot, Cold and Overdue Numbers',
+    description: 'How often each Mark Six number from 1 to 49 has been drawn, the most and least drawn numbers and how long since each last appeared.',
+  },
   '/faq': {
     label: 'FAQ',
     path: '/faq',
