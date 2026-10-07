@@ -10,6 +10,9 @@ import { isBall, MAX_MULTI, sortAsc, ticketUnits } from '@/lib/mark6';
 import { can, type Role } from '@/lib/perms';
 import { newTotpSecret, verifyTotp } from '@/lib/totp';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
+import { createHash, randomBytes } from 'node:crypto';
+import { BASE_URL } from '@/lib/seo';
+import { sendMail } from '@/lib/mail';
 import { addPoints, openDraw } from '@/lib/points';
 import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
@@ -244,4 +247,56 @@ export async function disableTotpAction(fd: FormData) {
   const ok = u?.totp_secret && (await verifyPassword(text(fd, 'password').slice(0, 200), u.pass_hash)) && verifyTotp(u.totp_secret, text(fd, 'code'));
   if (ok) await exec('UPDATE users SET totp_on=0, totp_secret=NULL WHERE id=?', [user.id]);
   redirect(`/account?two=${ok ? 'off' : 'bad'}#two-step`);
+}
+
+/* ---------- forgot / reset password ---------- */
+
+const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
+const SENT = 'If that email has an account, we have sent a link to reset the password. It works for 1 hour.';
+
+export async function forgotPasswordAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  if (!dbConfigured) return NO_DB;
+  const email = text(fd, 'email').trim().toLowerCase().slice(0, 190);
+  const ipLimit = rateLimit(`forgot-ip:${await clientIp()}`, 5, 60 * 60_000);
+  if (!ipLimit.ok) return tooMany(ipLimit.retryAfterSec);
+  if (!EMAIL.test(email)) return { error: 'Enter a valid email address.', email };
+  const mailLimit = rateLimit(`forgot-mail:${email}`, 3, 60 * 60_000);
+  if (!mailLimit.ok) return { ok: SENT }; // same answer, so nobody can probe which emails exist
+
+  const [user] = await query<UserRow>('SELECT id, pass_hash, role, blocked FROM users WHERE email=?', [email]);
+  if (user && !user.blocked) {
+    const token = randomBytes(32).toString('base64url');
+    await exec('DELETE FROM password_resets WHERE user_id=? OR expires_at < UTC_TIMESTAMP()', [user.id]);
+    await exec('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?,?,UTC_TIMESTAMP() + INTERVAL 1 HOUR)', [user.id, sha256(token)]);
+    // Not awaited: the reply takes the same time whether or not the account exists.
+    void sendMail(
+      email,
+      'Reset your password',
+      `Someone asked to reset the password for this email address.\n\nOpen this link within 1 hour to choose a new password:\n${BASE_URL}/reset?token=${token}\n\nIf this was not you, ignore this email. Your password stays the same.`,
+    );
+  }
+  return { ok: SENT };
+}
+
+export async function resetPasswordAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  if (!dbConfigured) return NO_DB;
+  const limit = rateLimit(`reset:${await clientIp()}`, 10, 60 * 60_000);
+  if (!limit.ok) return tooMany(limit.retryAfterSec);
+  const token = text(fd, 'token').slice(0, 100);
+  const password = text(fd, 'password');
+  const problem = passwordProblem(password);
+  if (problem) return { error: problem };
+
+  const [row] = await query<RowDataPacket & { id: number; user_id: number }>(
+    'SELECT id, user_id FROM password_resets WHERE token_hash=? AND used=0 AND expires_at > UTC_TIMESTAMP()',
+    [sha256(token)],
+  );
+  if (!row) return { error: 'This link has expired or was already used. Ask for a new one.' };
+  const hash = await hashPassword(password);
+  // Marking the link used first makes a double submit harmless.
+  const claimed = await exec('UPDATE password_resets SET used=1 WHERE id=? AND used=0', [row.id]);
+  if (!claimed.affectedRows) return { error: 'This link has expired or was already used. Ask for a new one.' };
+  await exec('UPDATE users SET pass_hash=? WHERE id=?', [hash, row.user_id]); // also signs out every existing session
+  await exec('DELETE FROM login_fails WHERE email=(SELECT email FROM users WHERE id=?)', [row.user_id]);
+  redirect('/login?reset=1');
 }

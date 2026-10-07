@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { changePasswordAction, loginAction, registerAction, type FormState } from '@/actions/account';
+import { changePasswordAction, forgotPasswordAction, loginAction, resetPasswordAction, registerAction, type FormState } from '@/actions/account';
 import { FormMessage, SubmitButton } from '@/components/submit-button';
 
 const input = 'mt-1 h-11 w-full rounded-xl border border-line bg-night px-4 text-ivory placeholder:text-mute/60';
@@ -62,6 +62,35 @@ export function ChangePasswordForm() {
       </label>
       <FormMessage error={state.error} ok={state.ok} />
       <SubmitButton variant="outline" pendingText="Saving...">Change password</SubmitButton>
+    </form>
+  );
+}
+
+export function ForgotForm() {
+  const [state, action] = useActionState(forgotPasswordAction, none);
+  return (
+    <form action={action} className="space-y-4">
+      <label className="block text-sm text-mute">
+        Email
+        <input className={input} type="email" name="email" required autoComplete="email" maxLength={190} defaultValue={state.email} />
+      </label>
+      <FormMessage error={state.error} ok={state.ok} />
+      <SubmitButton size="lg" pendingText="Sending..." className="w-full">Send reset link</SubmitButton>
+    </form>
+  );
+}
+
+export function ResetForm({ token }: { token: string }) {
+  const [state, action] = useActionState(resetPasswordAction, none);
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="token" value={token} />
+      <label className="block text-sm text-mute">
+        New password (at least 10 characters)
+        <input className={input} type="password" name="password" required minLength={10} maxLength={200} autoComplete="new-password" />
+      </label>
+      <FormMessage error={state.error} />
+      <SubmitButton size="lg" pendingText="Saving..." className="w-full">Set new password</SubmitButton>
     </form>
   );
 }
