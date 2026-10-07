@@ -13,3 +13,4 @@
 
 - Declined wallets/top-ups/paid tickets/auto payouts: unlicensed betting in Hong Kong and against CLAUDE.md. Built free saved tickets linked to a draw instead.
 - Points wallet allowed only as free play credits: no purchase, no top-up by payment, no cash-out, no prizes of value. If points ever become buyable or redeemable it becomes betting; do not add that. Tickets pay once (settled flag); un-publishing or editing a draw later does not claw back points; deleting a ticket does not refund.
+- Ordering closes at the draw's stop_selling_time (HK, UTC+8), or 23:59:59 HK on the draw date if none. Refunds only for orders whose draw is still upcoming; ordered tickets cannot be deleted by users (prevents refund exploits), only old unordered saves can.

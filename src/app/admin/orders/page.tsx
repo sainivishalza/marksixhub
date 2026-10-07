@@ -1,18 +1,20 @@
 import Link from 'next/link';
 import { NumberBall } from '@/components/ball';
-import { AdminTable, PageHeader, Panel, inputClass } from '@/components/admin/ui';
+import { refundOrderAction } from '@/actions/admin';
+import { AdminTable, Notice, PageHeader, Panel, inputClass } from '@/components/admin/ui';
 import { Button } from '@/components/ui/button';
 import { getDrawOrders, listDrawNos } from '@/lib/admin-data';
+import { can } from '@/lib/perms';
 import { requireRole } from '@/lib/auth';
 import { ALL_BALLS, parseNumbers } from '@/lib/mark6';
 import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Orders' };
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ draw?: string }> }) {
-  await requireRole('view');
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ draw?: string; ok?: string; error?: string }> }) {
+  const me = await requireRole('view');
   const draws = await listDrawNos();
-  const { draw: wanted } = await searchParams;
+  const { draw: wanted, ok, error } = await searchParams;
   const current = draws.find((d) => d.drawNo === wanted) ?? draws.find((d) => d.status === 'upcoming') ?? draws[0];
   const { orders, freq, ticketCount } = current ? await getDrawOrders(current.drawNo) : { orders: [], freq: [] as number[], ticketCount: 0 };
   const winning = current?.nums ? parseNumbers(current.nums) : [];
@@ -30,6 +32,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         </form>
       </PageHeader>
 
+      <Notice ok={ok} error={error} />
       {!current ? (
         <p className="text-mute">No draws yet.</p>
       ) : (
@@ -60,7 +63,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
           <AdminTable
             caption={`Orders for draw ${current.drawNo}`}
-            head={['Order', 'User', 'Placed (UTC)', 'Points', 'Numbers']}
+            head={['Order', 'User', 'Placed (UTC)', 'Points', 'Numbers', '']}
             empty={orders.length === 0 ? <p className="p-6 text-sm text-mute">No orders for this draw yet.</p> : null}
           >
             {orders.map((o) => (
@@ -70,6 +73,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <td className="whitespace-nowrap px-4 py-3 text-mute">{o.createdAt.slice(0, 16)}</td>
                 <td className="px-4 py-3 font-mono tabular-nums">{o.points}</td>
                 <td className="px-4 py-3">
+                  {o.refunded ? <p className="text-sm text-mute">Refunded, {o.points} points returned.</p> : null}
                   <ul className="space-y-2">
                     {o.tickets.map((t, i) => (
                       <li key={i} className="flex flex-wrap items-center gap-1.5">
@@ -79,6 +83,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                       </li>
                     ))}
                   </ul>
+                </td>
+                <td className="px-4 py-3">
+                  {can(me.role, 'manage') && current.status === 'upcoming' && !o.refunded ? (
+                    <form action={refundOrderAction}>
+                      <input type="hidden" name="id" value={o.id} />
+                      <input type="hidden" name="draw" value={current.drawNo} />
+                      <Button type="submit" size="sm" variant="outline">Refund</Button>
+                    </form>
+                  ) : null}
                 </td>
               </tr>
             ))}

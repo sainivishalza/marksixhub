@@ -8,7 +8,7 @@ import { Picker } from '@/components/picker';
 import { ResultStub } from '@/components/result-stub';
 import { ResultsTable } from '@/components/results-table';
 import { getUser } from '@/lib/auth';
-import { getPoints } from '@/lib/points';
+import { walletFor } from '@/lib/points';
 import { getCurrentCurrency, getDraws, getEvents, getFaqs, getLatestDraw, getNextDraw, getPrizes } from '@/lib/data';
 import { dateLabel } from '@/lib/format';
 import { seoMetadata } from '@/lib/seo-db';
@@ -82,7 +82,7 @@ export default async function HomePage() {
             latest={latest ? { drawNo: latest.drawNo, numbers: latest.numbers, extra: latest.extra } : null}
             prizes={prizes}
             currency={current}
-            wallet={user ? { points: await getPoints(user.id), cost: settings.ticketPoints, drawNo: next?.drawNo ?? null } : null}
+            wallet={user ? await walletFor(user.id, settings.ticketPoints) : null}
           />
         </div>
       </section>

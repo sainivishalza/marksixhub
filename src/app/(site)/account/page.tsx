@@ -22,9 +22,13 @@ export default async function AccountPage() {
     getSettings(),
     query<RowDataPacket & { done: number }>('SELECT (last_claim = UTC_DATE()) AS done FROM users WHERE id=?', [user.id]),
   ]);
+  const [orders, log] = await Promise.all([
+    query<RowDataPacket & { id: number; draw_no: string; tickets: number; points: number; refunded: number; created_at: string }>('SELECT id, draw_no, tickets, points, refunded, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 30', [user.id]),
+    query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 25', [user.id]),
+  ]);
   const [sets, { current }] = await Promise.all([
-    query<RowDataPacket & { id: number; nums: string; created_at: string; draw_no: string | null; won_points: number; settled: number; units: number; r_nums: string | null; r_extra: number | null }>(
-      `SELECT s.id, s.nums, s.created_at, s.draw_no, s.won_points, s.settled, s.units, d.nums AS r_nums, d.extra AS r_extra FROM saved_sets s LEFT JOIN draws d ON d.draw_no = s.draw_no AND d.status='published' WHERE s.user_id=? ORDER BY s.id DESC`,
+    query<RowDataPacket & { id: number; nums: string; created_at: string; draw_no: string | null; order_id: number | null; won_points: number; settled: number; units: number; r_nums: string | null; r_extra: number | null }>(
+      `SELECT s.id, s.nums, s.created_at, s.draw_no, s.order_id, s.won_points, s.settled, s.units, d.nums AS r_nums, d.extra AS r_extra FROM saved_sets s LEFT JOIN draws d ON d.draw_no = s.draw_no AND d.status='published' WHERE s.user_id=? ORDER BY s.id DESC`,
       [user.id],
     ),
     getCurrentCurrency(),
@@ -48,40 +52,83 @@ export default async function AccountPage() {
         </form>
       </section>
 
-      <h2 className="mb-4 mt-10 text-2xl">My tickets</h2>
-      {sets.length === 0 ? (
+      <h2 className="mb-4 mt-10 text-2xl">My orders</h2>
+      {orders.length === 0 && sets.length === 0 ? (
         <p className="text-mute">
-          Nothing saved yet. Choose numbers in the <Link href="/picker" className="text-gold-bright underline-offset-4 hover:underline">number picker</Link> and press Save.
+          No orders yet. Choose numbers in the <Link href="/picker" className="text-gold-bright underline-offset-4 hover:underline">number picker</Link> and place an order.
         </p>
-      ) : (
-        <ul className="divide-y divide-line/50 rounded-2xl border border-line">
-          {sets.map((s) => {
-            const numbers = parseNumbers(s.nums);
-            const multi = numbers.length > 6;
-            const ev = !multi && s.r_nums ? evaluate(numbers, parseNumbers(s.r_nums), s.r_extra) : null;
-            return (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div>
-                  <BallRow numbers={numbers} size="sm" />
-                  <p className="mt-2 text-xs text-mute">
-                    Saved {dateLabel(s.created_at.slice(0, 10), { weekday: undefined })}
-                    {s.draw_no ? `. Draw ${s.draw_no}: ` : ''}
-                    {multi ? `multiple entry, ${s.units} tickets, ` : ''}
-                    {ev ? `${ev.matches} match${ev.matches === 1 ? '' : 'es'}${ev.extraHit ? ' + extra' : ''}${ev.division ? `, ${DIVISION_LABEL[ev.division - 1]} prize: ${s.won_points} points` : ', no prize'}.` : s.settled ? (s.won_points ? `won ${s.won_points} points.` : 'no prize.') : s.draw_no ? 'result pending.' : ''}
-                  </p>
-                </div>
-                <form action={deleteSetAction}>
-                  <input type="hidden" name="id" value={s.id} />
-                  <Button type="submit" variant="ghost" size="sm" aria-label={`Delete saved set ${s.nums}`}>Delete</Button>
-                </form>
+      ) : null}
+      <div className="space-y-4">
+        {orders.map((o) => {
+          const mine = sets.filter((s) => s.order_id === o.id);
+          const again = mine.map((s) => s.nums).join('|');
+          return (
+            <section key={o.id} className="rounded-2xl border border-line">
+              <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line/50 px-4 py-3 text-sm">
+                <span>
+                  <span className="font-mono text-ivory">Order #{o.id}</span> <span className="text-mute">for draw {o.draw_no}, {dateLabel(String(o.created_at).slice(0, 10), { weekday: undefined })}. {o.tickets} ticket{o.tickets === 1 ? '' : 's'}, {o.points} points{o.refunded ? ' (refunded)' : ''}.</span>
+                </span>
+                {mine.length ? <Link href={`/picker?t=${again}`} className="text-gold-bright underline-offset-4 hover:underline">Play these again</Link> : null}
+              </header>
+              <ul className="divide-y divide-line/50">
+                {mine.map((s) => <TicketRow key={s.id} s={s} />)}
+              </ul>
+            </section>
+          );
+        })}
+        {sets.some((s) => !s.order_id) ? (
+          <section className="rounded-2xl border border-line">
+            <header className="border-b border-line/50 px-4 py-3 text-sm text-mute">Earlier saved numbers</header>
+            <ul className="divide-y divide-line/50">
+              {sets.filter((s) => !s.order_id).map((s) => <TicketRow key={s.id} s={s} deletable />)}
+            </ul>
+          </section>
+        ) : null}
+      </div>
+
+      <details className="mt-10 rounded-2xl border border-line p-4">
+        <summary className="cursor-pointer text-lg">Points history</summary>
+        {log.length === 0 ? <p className="mt-3 text-sm text-mute">Nothing yet.</p> : (
+          <ul className="mt-3 divide-y divide-line/50 text-sm">
+            {log.map((l) => (
+              <li key={l.id} className="flex justify-between gap-3 py-2">
+                <span className="text-mute">{String(l.created_at).slice(0, 10)} {l.reason}</span>
+                <span className={`font-mono tabular-nums ${l.delta > 0 ? 'text-win' : 'text-miss'}`}>{l.delta > 0 ? '+' : ''}{l.delta}</span>
               </li>
-            );
-          })}
-        </ul>
-      )}
+            ))}
+          </ul>
+        )}
+      </details>
 
       <h2 className="mb-4 mt-12 text-2xl">Change password</h2>
       <ChangePasswordForm />
     </div>
+  );
+}
+
+type Set = { id: number; nums: string; draw_no: string | null; won_points: number; settled: number; units: number; r_nums: string | null; r_extra: number | null };
+
+function TicketRow({ s, deletable = false }: { s: Set; deletable?: boolean }) {
+  const numbers = parseNumbers(s.nums);
+  const multi = numbers.length > 6;
+  const ev = !multi && s.r_nums ? evaluate(numbers, parseNumbers(s.r_nums), s.r_extra) : null;
+  const result = ev
+    ? `${ev.matches} match${ev.matches === 1 ? '' : 'es'}${ev.extraHit ? ' + extra' : ''}${ev.division ? `, ${DIVISION_LABEL[ev.division - 1]} prize: ${s.won_points} points` : ', no prize'}.`
+    : s.settled
+      ? s.won_points ? `Won ${s.won_points} points.` : 'No prize.'
+      : s.draw_no ? 'Result pending.' : '';
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 p-4">
+      <div>
+        <BallRow numbers={numbers} size="sm" />
+        <p className="mt-2 text-xs text-mute">{multi ? `Multiple entry, ${s.units} tickets. ` : ''}{result}</p>
+      </div>
+      {deletable && s.settled ? (
+        <form action={deleteSetAction}>
+          <input type="hidden" name="id" value={s.id} />
+          <Button type="submit" variant="ghost" size="sm" aria-label={`Delete saved set ${s.nums}`}>Delete</Button>
+        </form>
+      ) : null}
+    </li>
   );
 }

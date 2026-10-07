@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth';
 import { parseCsv } from '@/lib/csv';
 import { bustCurrencies } from '@/lib/data';
 import { exec, query, tx, type Tx } from '@/lib/db';
+import { audit } from '@/lib/audit';
 import { addPoints, settleTickets } from '@/lib/points';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
@@ -54,7 +55,7 @@ const drawColumns = (v: DrawInput) => {
 };
 
 export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promise<DrawFormState> {
-  await requireRole('content');
+  const me = await requireRole('content');
   const raw = Object.fromEntries([...fd.entries()].filter(([, v]) => typeof v === 'string')) as Record<string, string>;
   const { value, errors } = readDraw(raw);
   if (errors.length) return { errors, raw, n: Date.now() };
@@ -75,28 +76,32 @@ export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promis
     throw err;
   }
   await settleTickets();
+  await audit(me.id, 'draw.save', `${value.drawNo} (${value.status})`);
   back('/admin/draws', 'ok', `Draw ${value.drawNo} saved.`);
   return {};
 }
 
 export async function toggleDrawStatusAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   const id = int(fd, 'id');
   const [d] = await query<RowDataPacket & { draw_no: string; status: string; nums: string | null; extra: number | null }>('SELECT draw_no, status, nums, extra FROM draws WHERE id=?', [id]);
   if (!d) back('/admin/draws', 'error', 'Draw not found.');
   if (d.status === 'published') {
     await exec("UPDATE draws SET status='upcoming' WHERE id=?", [id]);
+    await audit(me.id, 'draw.unpublish', d.draw_no);
     back('/admin/draws', 'ok', `Draw ${d.draw_no} is now a draft (hidden from the public).`);
   }
   if (!d.nums || !d.extra) back('/admin/draws', 'error', `Draw ${d.draw_no} has no winning numbers yet. Edit it first.`);
   await exec("UPDATE draws SET status='published' WHERE id=?", [id]);
   await settleTickets();
+  await audit(me.id, 'draw.publish', d.draw_no);
   back('/admin/draws', 'ok', `Draw ${d.draw_no} is now published.`);
 }
 
 export async function deleteDrawAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   await exec('DELETE FROM draws WHERE id=?', [int(fd, 'id')]);
+  await audit(me.id, 'draw.delete', `id ${int(fd, 'id')}`);
   back('/admin/draws', 'ok', 'Draw deleted.');
 }
 
@@ -105,7 +110,7 @@ const MAX_CSV_BYTES = 500_000;
 const MAX_CSV_ROWS = 2000;
 
 export async function importDrawsAction(_prev: ImportState, fd: FormData): Promise<ImportState> {
-  await requireRole('content');
+  const me = await requireRole('content');
   const file = fd.get('file');
   let text = str(fd, 'csv');
   if (file instanceof File && file.size > 0) {
@@ -138,6 +143,7 @@ export async function importDrawsAction(_prev: ImportState, fd: FormData): Promi
     }
   });
   await settleTickets();
+  await audit(me.id, 'draw.import', `${valid.length} draws`);
   return { imported: valid.length };
 }
 
@@ -224,11 +230,12 @@ export async function setRoleAction(fd: FormData) {
   if (!isRole(role)) back(path, 'error', 'Unknown role.');
   if (id === me.id) back(path, 'error', 'You cannot change your own role. Ask another admin.');
   await exec('UPDATE users SET role=? WHERE id=?', [role, id]);
+  await audit(me.id, 'user.role', `user ${id} -> ${role}`);
   back(path, 'ok', 'Role updated.');
 }
 
 export async function saveSettingsAction(fd: FormData) {
-  await requireRole('manage');
+  const me = await requireRole('manage');
   const siteName = str(fd, 'site_name').slice(0, 60);
   if (!siteName) back('/admin/settings', 'error', 'The site name cannot be empty.');
   await saveSettings({
@@ -242,14 +249,39 @@ export async function saveSettingsAction(fd: FormData) {
     signupPoints: int(fd, 'signup_points'),
     prizePoints: Array.from({ length: 7 }, (_, i) => int(fd, `prize_${i + 1}`)),
   });
+  await audit(me.id, 'settings.save', 'site and points settings');
   back('/admin/settings', 'ok', 'Settings saved.');
 }
 
 export async function grantPointsAction(fd: FormData) {
-  await requireRole('manage');
+  const me = await requireRole('manage');
   const id = int(fd, 'id');
   const amount = int(fd, 'amount');
   if (!id || !amount || Math.abs(amount) > 1_000_000) back('/admin/users', 'error', 'Enter a whole number of points between -1,000,000 and 1,000,000.');
   const ok = await addPoints(id, amount, `Admin ${amount > 0 ? 'grant' : 'adjustment'}`);
+  if (ok) await audit(me.id, 'points.adjust', `user ${id}: ${amount}`);
   back('/admin/users', ok ? 'ok' : 'error', ok ? 'Points updated.' : 'That would take the balance below zero.');
+}
+
+/** Cancels an order for a draw that has not been published yet and returns its points. */
+export async function refundOrderAction(fd: FormData) {
+  const me = await requireRole('manage');
+  const id = int(fd, 'id');
+  const drawNo = str(fd, 'draw');
+  const path = `/admin/orders?draw=${encodeURIComponent(drawNo)}`;
+  const done = await tx(async (t) => {
+    const [o] = await t.query<RowDataPacket & { user_id: number; points: number; draw_no: string }>(
+      "SELECT o.user_id, o.points, o.draw_no FROM orders o JOIN draws d ON d.draw_no = o.draw_no AND d.status='upcoming' WHERE o.id=? AND o.refunded=0 FOR UPDATE",
+      [id],
+    );
+    if (!o) return false;
+    await t.exec('UPDATE orders SET refunded=1 WHERE id=?', [id]);
+    await t.exec('DELETE FROM saved_sets WHERE order_id=? AND settled=0', [id]);
+    await t.exec('UPDATE users SET points = points + ? WHERE id=?', [o.points, o.user_id]);
+    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [o.user_id, o.points, `Refund order #${id}`]);
+    return true;
+  });
+  if (!done) back(path, 'error', 'That order cannot be refunded (already refunded, or its draw is published).');
+  await audit(me.id, 'order.refund', `order ${id}, draw ${drawNo}`);
+  back(path, 'ok', `Order #${id} refunded.`);
 }

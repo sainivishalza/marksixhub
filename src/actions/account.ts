@@ -9,7 +9,7 @@ import { dbConfigured, exec, query, tx } from '@/lib/db';
 import { isBall, MAX_MULTI, sortAsc, ticketUnits } from '@/lib/mark6';
 import { can } from '@/lib/perms';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
-import { addPoints } from '@/lib/points';
+import { addPoints, openDraw } from '@/lib/points';
 import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
 import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
@@ -84,8 +84,9 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
   }
   const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM saved_sets WHERE user_id=?', [user.id]);
   if (Number(n) + tickets.length > MAX_SETS) return { ok: false, message: `You can keep up to ${MAX_SETS} tickets. Delete some first.` };
-  const [next] = await query<RowDataPacket & { draw_no: string }>("SELECT draw_no FROM draws WHERE status='upcoming' ORDER BY draw_date ASC LIMIT 1");
-  if (!next) return { ok: false, message: 'No draw is open for tickets right now.' };
+  const open = await openDraw();
+  if (!open) return { ok: false, message: 'Ordering is closed. The next draw opens for tickets once it is announced.' };
+  const next = { draw_no: open.drawNo };
 
   const { ticketPoints } = await getSettings();
   const units = tickets.map((t) => ticketUnits(t.length));
@@ -119,7 +120,7 @@ export async function claimDailyAction() {
 
 export async function deleteSetAction(fd: FormData) {
   const user = await requireUser();
-  await exec('DELETE FROM saved_sets WHERE id=? AND user_id=?', [parseInt(text(fd, 'id'), 10) || 0, user.id]);
+  await exec('DELETE FROM saved_sets WHERE id=? AND user_id=? AND settled=1', [parseInt(text(fd, 'id'), 10) || 0, user.id]);
   revalidatePath('/account');
 }
 

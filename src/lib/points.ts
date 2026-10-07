@@ -44,3 +44,21 @@ export async function settleTickets() {
     });
   }
 }
+
+/** Draws close for orders at their stop selling time, or the end of the draw day, Hong Kong time. */
+export async function openDraw(): Promise<{ drawNo: string; closesAt: Date } | null> {
+  const rows = await query<RowDataPacket & { draw_no: string; draw_date: string; t: string | null }>(
+    "SELECT draw_no, draw_date, stop_selling_time AS t FROM draws WHERE status='upcoming' ORDER BY draw_date ASC LIMIT 10",
+  );
+  const now = Date.now();
+  for (const r of rows) {
+    const closesAt = new Date(`${String(r.draw_date).slice(0, 10)}T${r.t ? String(r.t).slice(0, 8) : '23:59:59'}+08:00`);
+    if (closesAt.getTime() > now) return { drawNo: r.draw_no, closesAt };
+  }
+  return null;
+}
+
+export async function walletFor(userId: number, cost: number) {
+  const [points, open] = await Promise.all([getPoints(userId), openDraw()]);
+  return { points, cost, drawNo: open?.drawNo ?? null, closesAt: open?.closesAt.toISOString() ?? null };
+}

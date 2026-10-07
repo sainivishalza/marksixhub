@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 type LatestDraw = { drawNo: string; numbers: number[]; extra: number | null };
 type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; wallet?: Wallet | null; id?: string };
-type Wallet = { points: number; cost: number; drawNo: string | null };
+type Wallet = { points: number; cost: number; drawNo: string | null; closesAt: string | null };
 
 const PICK = 6;
 const MAX_ORDER = 20;
@@ -120,7 +120,15 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
 
   // A shared link such as /picker?n=3,12,25,31,40,49 preloads the ticket.
   useEffect(() => {
-    const shared = new URLSearchParams(window.location.search).get('n');
+    const params = new URLSearchParams(window.location.search);
+    // /picker?t=1,2,3,4,5,6|7,8,9,10,11,12 refills the slip ("play again").
+    const again = (params.get('t') ?? '')
+      .split('|')
+      .slice(0, MAX_ORDER)
+      .map((x) => [...new Set(x.split(',').map(Number))].filter(isBall))
+      .filter((t) => t.length >= PICK && t.length <= MAX_MULTI);
+    if (again.length) setSlip(again);
+    const shared = params.get('n');
     if (!shared) return;
     const nums = [...new Set(shared.split(',').map(Number))].filter(isBall).slice(0, PICK);
     if (nums.length) setSel(nums);
@@ -381,7 +389,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
         <div className="mt-4 rounded-xl border border-gold/30 p-3">
           <p className="text-sm text-mute">
             Balance <span className="font-mono text-gold-bright">{points}</span> points. Each ticket costs <span className="font-mono">{wallet.cost}</span>.
-            {wallet.drawNo ? ` For draw ${wallet.drawNo}.` : ' No draw is open yet.'}
+            {wallet.drawNo ? ` For draw ${wallet.drawNo}${wallet.closesAt ? `, ordering closes ${new Date(wallet.closesAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}.` : ' Ordering is closed until the next draw is announced.'}
           </p>
           <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo}>
             <Ticket aria-hidden className="h-4 w-4" />

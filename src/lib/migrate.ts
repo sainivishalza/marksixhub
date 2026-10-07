@@ -77,6 +77,13 @@ const TABLES = [
     KEY idx_user (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS audit_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    action VARCHAR(40) NOT NULL,
+    detail VARCHAR(250) NOT NULL DEFAULT '',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS settings (
     k VARCHAR(40) PRIMARY KEY,
     v TEXT NOT NULL
@@ -153,6 +160,8 @@ export async function migrate() {
   if (!(await hasColumn('saved_sets', 'order_id'))) {
     await exec('ALTER TABLE saved_sets MODIFY nums VARCHAR(40) NOT NULL, ADD COLUMN order_id INT NULL, ADD COLUMN units INT NOT NULL DEFAULT 1, ADD KEY idx_order (order_id)');
   }
+
+  if (!(await hasColumn('orders', 'refunded'))) await exec('ALTER TABLE orders ADD COLUMN refunded TINYINT(1) NOT NULL DEFAULT 0');
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);

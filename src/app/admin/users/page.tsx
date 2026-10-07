@@ -32,7 +32,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       >
         {users.map((u) => (
           <tr key={u.id} className="align-middle">
-            <th scope="row" className="max-w-[16rem] truncate px-4 py-3 font-medium">{u.email}{u.id === me.id ? <span className="ml-2 text-xs text-gold-bright">(you)</span> : null}</th>
+            <th scope="row" className="max-w-[16rem] truncate px-4 py-3 font-medium"><Link href={`/admin/users/${u.id}`} className="hover:text-gold-bright">{u.email}</Link>{u.id === me.id ? <span className="ml-2 text-xs text-gold-bright">(you)</span> : null}</th>
             <td className="px-4 py-3">
               {u.id === me.id ? (
                 <span className="text-mute">{u.role}</span>
