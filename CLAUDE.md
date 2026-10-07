@@ -1,7 +1,7 @@
 # Mark Six Hub
 
 ## Goal
-marksixhub.com: information-only Hong Kong Mark Six site (number picker, results, prizes, draw calendar, guide/FAQ, accounts for saved numbers, admin panel). NO betting, NO wallets, NO proxy orders (illegal/regulated). No horse racing. Never put "HKJC" in branding. Minimal code, zero known bugs.
+marksixhub.com: Hong Kong Mark Six site (number picker, results, prizes, draw calendar, statistics, guide/FAQ, accounts with a free-play points balance used to place tickets, admin panel). Points are free play credits. No horse racing. Never put "HKJC" in branding. Minimal code, zero known bugs.
 
 ## Workflow
 - At session start: read TASKS.md and DESIGN.md. At end: update TASKS.md.
