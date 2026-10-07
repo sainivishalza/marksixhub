@@ -84,8 +84,21 @@ export async function getEvents(): Promise<EventItem[]> {
   return rows.map((r) => ({ id: r.id, title: r.title, eventDate: r.event_date, body: r.body }));
 }
 
+let currencyCache: { at: number; value: Currency[] } | null = null;
+/** Called after the admin edits currencies so the change shows up immediately. */
+export const bustCurrencies = () => {
+  currencyCache = null;
+};
+
 export async function getCurrencies(): Promise<Currency[]> {
   if (useSample) return sampleCurrencies;
+  if (currencyCache && Date.now() - currencyCache.at < 30_000) return currencyCache.value;
+  const value = await loadCurrencies();
+  currencyCache = { at: Date.now(), value };
+  return value;
+}
+
+async function loadCurrencies(): Promise<Currency[]> {
   try {
     const rows = await query<RowDataPacket & { code: string; name: string; symbol: string; rate: string }>(
       "SELECT code, name, symbol, rate FROM currencies WHERE active=1 ORDER BY code='HKD' DESC, code",

@@ -8,6 +8,8 @@ const host = (() => {
   }
 })();
 
+const protocol = (process.env.BASE_URL || '').startsWith('http://') ? 'http:' : 'https:';
+
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
@@ -15,6 +17,11 @@ const config: NextConfig = {
   experimental: {
     // Server Actions compare the request Origin with the Host. Behind a hosting proxy those can differ, so name the real domain.
     serverActions: { allowedOrigins: [host, `www.${host.replace(/^www\./, '')}`], bodySizeLimit: '1mb' },
+  },
+  async redirects() {
+    const apex = host.replace(/^www\./, '');
+    // Send www to the one canonical address so search engines see a single site.
+    return [{ source: '/:path*', has: [{ type: 'host', value: `www.${apex}` }], destination: `${protocol}//${apex}/:path*`, permanent: true }];
   },
   async headers() {
     return [

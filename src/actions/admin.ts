@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import type { RowDataPacket } from 'mysql2/promise';
 import { requireRole } from '@/lib/auth';
 import { parseCsv } from '@/lib/csv';
+import { bustCurrencies } from '@/lib/data';
 import { exec, query, tx, type Tx } from '@/lib/db';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
@@ -181,6 +182,7 @@ export async function saveCurrencyAction(fd: FormData) {
     'INSERT INTO currencies (code, name, symbol, rate, active) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name), symbol=VALUES(symbol), rate=VALUES(rate), active=VALUES(active)',
     [value.code, value.name, value.symbol, value.rate, value.active ? 1 : 0],
   );
+  bustCurrencies();
   back('/admin/currencies', 'ok', `${value.code} saved.`);
 }
 
@@ -189,6 +191,7 @@ export async function deleteCurrencyAction(fd: FormData) {
   const code = str(fd, 'code').toUpperCase();
   if (code === 'HKD') back('/admin/currencies', 'error', 'HKD is the base currency and cannot be removed.');
   await exec('DELETE FROM currencies WHERE code=?', [code]);
+  bustCurrencies();
   back('/admin/currencies', 'ok', `${code} removed.`);
 }
 
