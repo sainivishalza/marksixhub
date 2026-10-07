@@ -6,18 +6,20 @@ import { ChangePasswordForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
 import { deleteSetAction } from '@/actions/account';
 import { requireUser } from '@/lib/auth';
-import { getCurrentCurrency, getLatestDraw } from '@/lib/data';
+import { getCurrentCurrency } from '@/lib/data';
 import { query } from '@/lib/db';
 import { dateLabel } from '@/lib/format';
-import { evaluate, parseNumbers } from '@/lib/mark6';
+import { DIVISION_LABEL, evaluate, parseNumbers } from '@/lib/mark6';
 
 export const metadata: Metadata = { title: 'My account', robots: { index: false, follow: false } };
 
 export default async function AccountPage() {
   const user = await requireUser('/account');
-  const [sets, latest, { current }] = await Promise.all([
-    query<RowDataPacket & { id: number; nums: string; created_at: string }>('SELECT id, nums, created_at FROM saved_sets WHERE user_id=? ORDER BY id DESC', [user.id]),
-    getLatestDraw(),
+  const [sets, { current }] = await Promise.all([
+    query<RowDataPacket & { id: number; nums: string; created_at: string; draw_no: string | null; r_nums: string | null; r_extra: number | null }>(
+      `SELECT s.id, s.nums, s.created_at, s.draw_no, d.nums AS r_nums, d.extra AS r_extra FROM saved_sets s LEFT JOIN draws d ON d.draw_no = s.draw_no AND d.status='published' WHERE s.user_id=? ORDER BY s.id DESC`,
+      [user.id],
+    ),
     getCurrentCurrency(),
   ]);
 
@@ -37,14 +39,15 @@ export default async function AccountPage() {
         <ul className="divide-y divide-line/50 rounded-2xl border border-line">
           {sets.map((s) => {
             const numbers = parseNumbers(s.nums);
-            const ev = latest ? evaluate(numbers, latest.numbers, latest.extra) : null;
+            const ev = s.r_nums ? evaluate(numbers, parseNumbers(s.r_nums), s.r_extra) : null;
             return (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <div>
                   <BallRow numbers={numbers} size="sm" />
                   <p className="mt-2 text-xs text-mute">
                     Saved {dateLabel(s.created_at.slice(0, 10), { weekday: undefined })}
-                    {ev && latest ? `. Against draw ${latest.drawNo}: ${ev.matches} match${ev.matches === 1 ? '' : 'es'}${ev.extraHit ? ' + extra' : ''}.` : ''}
+                    {s.draw_no ? `. Draw ${s.draw_no}: ` : ''}
+                    {ev ? `${ev.matches} match${ev.matches === 1 ? '' : 'es'}${ev.extraHit ? ' + extra' : ''}${ev.division ? `, ${DIVISION_LABEL[ev.division - 1]} prize` : ', no prize'}.` : s.draw_no ? 'result pending.' : ''}
                   </p>
                 </div>
                 <form action={deleteSetAction}>

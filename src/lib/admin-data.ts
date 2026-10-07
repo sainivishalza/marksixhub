@@ -106,3 +106,14 @@ export async function listAllFaqs() {
   );
   return rows.map((r) => ({ id: r.id, question: r.question, answer: r.answer, sortOrder: r.sort_order, active: Boolean(r.active) }));
 }
+
+export type DrawTicket = { id: number; email: string; nums: string; createdAt: string };
+
+/** Tickets users saved for one draw (information only, no payments). */
+export async function listDrawTickets(drawNo: string): Promise<DrawTicket[]> {
+  const rows = await query<RowDataPacket & { id: number; email: string; nums: string; created_at: string }>(
+    'SELECT s.id, u.email, s.nums, s.created_at FROM saved_sets s JOIN users u ON u.id = s.user_id WHERE s.draw_no=? ORDER BY s.id DESC LIMIT 1000',
+    [drawNo],
+  );
+  return rows.map((r) => ({ id: r.id, email: r.email, nums: r.nums, createdAt: String(r.created_at) }));
+}

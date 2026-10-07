@@ -118,6 +118,8 @@ export async function migrate() {
     if (!(await hasColumn('draws', column))) await exec(`ALTER TABLE draws ADD COLUMN ${column} ${type}`);
   }
 
+  if (!(await hasColumn('saved_sets', 'draw_no'))) await exec('ALTER TABLE saved_sets ADD COLUMN draw_no VARCHAR(8) NULL, ADD KEY idx_draw (draw_no)');
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 

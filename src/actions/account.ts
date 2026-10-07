@@ -74,9 +74,10 @@ export async function saveSetAction(numbers: number[]): Promise<{ ok: boolean; m
   if (nums.length !== 6 || !nums.every(isBall)) return { ok: false, message: 'Pick exactly 6 different numbers from 1 to 49.' };
   const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM saved_sets WHERE user_id=?', [user.id]);
   if (Number(n) >= MAX_SETS) return { ok: false, message: `You can keep up to ${MAX_SETS} saved sets. Delete one first.` };
-  await exec('INSERT INTO saved_sets (user_id, nums) VALUES (?,?)', [user.id, sortAsc(nums).join(',')]);
+  const [next] = await query<RowDataPacket & { draw_no: string }>("SELECT draw_no FROM draws WHERE status='upcoming' ORDER BY draw_date ASC LIMIT 1");
+  await exec('INSERT INTO saved_sets (user_id, nums, draw_no) VALUES (?,?,?)', [user.id, sortAsc(nums).join(','), next?.draw_no ?? null]);
   revalidatePath('/account');
-  return { ok: true, message: 'Saved to your account.' };
+  return { ok: true, message: next ? `Saved for draw ${next.draw_no}. Pick again to save another ticket.` : 'Saved to your account. Pick again to save another ticket.' };
 }
 
 export async function deleteSetAction(fd: FormData) {

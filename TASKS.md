@@ -24,6 +24,9 @@ Done in part 3:
 - [x] Admin: only draw number and date are required to announce a draw; results are added later; form keeps what was typed after an error
 - [x] Number style: coloured rings, picked numbers become glossy white-centred balls (board, ticket, results)
 
+Done in part 4 (not yet run against real MySQL):
+- [x] Saved tickets are tagged with the next upcoming draw (saved_sets.draw_no); /account shows each ticket's result once that draw is published; admin draw page lists saved tickets per draw with matches. Information only: no wallets, payments or payouts (see CLAUDE.md).
+
 Todo (in order):
 1. Deploy branch `nextjs` to a STAGING site on Hostinger (staging.marksixhub.com, its own new database, BASE_URL=https://staging.marksixhub.com). Walk through: register, login, admin draw add/publish, CSV import, FAQ edit, settings, maintenance. Fix any SQL errors from the runtime logs.
 2. Lighthouse + header check on staging

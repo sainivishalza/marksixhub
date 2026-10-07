@@ -10,3 +10,5 @@
 - 2026-10-07: Colour token named `night`, not `base` (clashed with Tailwind `text-base` font size and turned ball digits dark). Ball class names written in full so Tailwind does not purge blue/green.
 - 2026-10-07: Next.js app deploys under Hostinger's existing Express preset: root `server.js` starts Next, `postinstall` runs `next build` when NODE_ENV=production, and build tools live in `dependencies` (production installs skip devDependencies). Verified in a clean-folder simulation. Chosen so no hPanel settings need changing.
 - 2026-10-07: Admin and account pages always read cookies first so they are never prerendered; every server action calls requireRole/requireUser itself.
+
+- Declined wallets/top-ups/paid tickets/auto payouts: unlicensed betting in Hong Kong and against CLAUDE.md. Built free saved tickets linked to a draw instead.
