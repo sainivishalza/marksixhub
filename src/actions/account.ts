@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { RowDataPacket } from 'mysql2/promise';
 import { clientIp, createSession, destroySession, getUser, requireUser, touchLogin } from '@/lib/auth';
-import { dbConfigured, exec, query } from '@/lib/db';
+import { dbConfigured, exec, query, tx } from '@/lib/db';
 import { isBall, sortAsc } from '@/lib/mark6';
 import { can } from '@/lib/perms';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
@@ -72,21 +72,32 @@ export async function logoutAction() {
   redirect('/');
 }
 
-export async function saveSetAction(numbers: number[]): Promise<{ ok: boolean; message: string }> {
+const MAX_PER_ORDER = 20;
+
+/** Enters several tickets for the next draw at once. Points are taken first; both steps are one transaction. */
+export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolean; message: string; points?: number }> {
   const user = await getUser();
-  if (!user) return { ok: false, message: 'Log in to save numbers.' };
-  const nums = [...new Set(Array.isArray(numbers) ? numbers.map(Number) : [])];
-  if (nums.length !== 6 || !nums.every(isBall)) return { ok: false, message: 'Pick exactly 6 different numbers from 1 to 49.' };
+  if (!user) return { ok: false, message: 'Log in to place tickets.' };
+  const tickets = (Array.isArray(sets) ? sets : []).slice(0, MAX_PER_ORDER).map((s) => [...new Set(Array.isArray(s) ? s.map(Number) : [])]);
+  if (!tickets.length || tickets.some((t) => t.length !== 6 || !t.every(isBall))) return { ok: false, message: 'Each ticket needs exactly 6 different numbers from 1 to 49.' };
   const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM saved_sets WHERE user_id=?', [user.id]);
-  if (Number(n) >= MAX_SETS) return { ok: false, message: `You can keep up to ${MAX_SETS} saved sets. Delete one first.` };
+  if (Number(n) + tickets.length > MAX_SETS) return { ok: false, message: `You can keep up to ${MAX_SETS} tickets. Delete some first.` };
   const [next] = await query<RowDataPacket & { draw_no: string }>("SELECT draw_no FROM draws WHERE status='upcoming' ORDER BY draw_date ASC LIMIT 1");
   if (!next) return { ok: false, message: 'No draw is open for tickets right now.' };
+
   const { ticketPoints } = await getSettings();
-  const paid = await addPoints(user.id, -ticketPoints, `Ticket, draw ${next.draw_no}`);
-  if (!paid) return { ok: false, message: `You need ${ticketPoints} points for a ticket. Claim your free daily points in My account.` };
-  await exec('INSERT INTO saved_sets (user_id, nums, draw_no) VALUES (?,?,?)', [user.id, sortAsc(nums).join(','), next.draw_no]);
+  const cost = ticketPoints * tickets.length;
+  const left = await tx(async (t) => {
+    const res = await t.exec('UPDATE users SET points = points - ? WHERE id=? AND points >= ?', [cost, user.id, cost]);
+    if (!res.affectedRows) return null;
+    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [user.id, -cost, `${tickets.length} ticket${tickets.length === 1 ? '' : 's'}, draw ${next.draw_no}`]);
+    for (const tk of tickets) await t.exec('INSERT INTO saved_sets (user_id, nums, draw_no) VALUES (?,?,?)', [user.id, sortAsc(tk).join(','), next.draw_no]);
+    const [u] = await t.query<RowDataPacket & { points: number }>('SELECT points FROM users WHERE id=?', [user.id]);
+    return Number(u.points);
+  });
+  if (left === null) return { ok: false, message: `You need ${cost} points for ${tickets.length} ticket${tickets.length === 1 ? '' : 's'}. Claim your free daily points in My account.` };
   revalidatePath('/account');
-  return { ok: true, message: `Ticket entered for draw ${next.draw_no} (${ticketPoints} points). Pick again to enter another.` };
+  return { ok: true, points: left, message: `${tickets.length} ticket${tickets.length === 1 ? '' : 's'} placed for draw ${next.draw_no}. ${cost} points taken, ${left} left.` };
 }
 
 export async function claimDailyAction() {

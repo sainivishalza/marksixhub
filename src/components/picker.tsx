@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Bookmark, Copy, Eraser, Share2, Sparkles } from 'lucide-react';
-import { saveSetAction } from '@/actions/account';
+import { Copy, Eraser, Plus, Share2, Sparkles, Ticket, X } from 'lucide-react';
+import { placeTicketsAction } from '@/actions/account';
 import { Button } from '@/components/ui/button';
 import { ballClass, ringClass } from '@/components/ball';
 import { ALL_BALLS, DIVISION_LABEL, evaluate, isBall, quickPick, sortAsc } from '@/lib/mark6';
@@ -13,12 +13,15 @@ import type { Currency, Prize } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type LatestDraw = { drawNo: string; numbers: number[]; extra: number | null };
-type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; loggedIn?: boolean; id?: string };
+type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; wallet?: Wallet | null; id?: string };
+type Wallet = { points: number; cost: number; drawNo: string | null };
 
 const PICK = 6;
 
-export function Picker({ latest, prizes, currency, loggedIn = false, id = 'board' }: Props) {
-  const [saving, startSaving] = useTransition();
+export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }: Props) {
+  const [placing, startPlacing] = useTransition();
+  const [slip, setSlip] = useState<number[][]>([]);
+  const [points, setPoints] = useState(wallet?.points ?? 0);
   const reduce = useReducedMotion();
   const [sel, setSel] = useState<number[]>([]);
   const [cursor, setCursor] = useState(1);
@@ -137,10 +140,24 @@ export function Picker({ latest, prizes, currency, loggedIn = false, id = 'board
     }
   };
 
-  const save = () =>
-    startSaving(async () => {
-      const res = await saveSetAction(sorted);
+  const addToSlip = () => {
+    const key = sorted.join(',');
+    if (slip.some((t) => t.join(',') === key)) return setStatus('That ticket is already on your slip.');
+    setSlip([...slip, sorted]);
+    setSel([]);
+    setStatus(`Added to your slip. ${slip.length + 1} ticket${slip.length ? 's' : ''} ready. Choose another or place them.`);
+  };
+
+  const orders = complete && !slip.some((t) => t.join(',') === sorted.join(',')) ? [...slip, sorted] : slip;
+  const place = () =>
+    startPlacing(async () => {
+      const res = await placeTicketsAction(orders);
       setStatus(res.message);
+      if (res.ok) {
+        if (res.points !== undefined) setPoints(res.points);
+        setSlip([]);
+        setSel([]);
+      }
     });
 
   const verdict = (() => {
@@ -239,17 +256,40 @@ export function Picker({ latest, prizes, currency, loggedIn = false, id = 'board
           <Share2 aria-hidden className="h-4 w-4" />
           Share
         </Button>
-        {loggedIn ? (
-          <Button variant="outline" onClick={save} disabled={!complete || saving}>
-            <Bookmark aria-hidden className="h-4 w-4" />
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        ) : null}
+        <Button variant="outline" onClick={addToSlip} disabled={!complete}>
+          <Plus aria-hidden className="h-4 w-4" />
+          Add another ticket
+        </Button>
       </div>
-      {!loggedIn && complete ? (
+
+      {slip.length ? (
+        <ul className="mt-4 space-y-2" aria-label="Tickets on your slip">
+          {slip.map((t, i) => (
+            <li key={t.join(',')} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm">
+              <span className="font-mono tracking-wide">{t.join('  ')}</span>
+              <button type="button" aria-label={`Remove ticket ${t.join(' ')}`} onClick={() => setSlip(slip.filter((_, k) => k !== i))} className="text-mute hover:text-ivory">
+                <X aria-hidden className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {wallet ? (
+        <div className="mt-4 rounded-xl border border-gold/30 p-3">
+          <p className="text-sm text-mute">
+            Balance <span className="font-mono text-gold-bright">{points}</span> points. Each ticket costs <span className="font-mono">{wallet.cost}</span>.
+            {wallet.drawNo ? ` For draw ${wallet.drawNo}.` : ' No draw is open yet.'}
+          </p>
+          <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo}>
+            <Ticket aria-hidden className="h-4 w-4" />
+            {placing ? 'Placing...' : orders.length ? `Place ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${orders.length * wallet.cost} points)` : 'Place ticket'}
+          </Button>
+        </div>
+      ) : complete ? (
         <p className="mt-3 text-sm text-mute">
           <Link href="/login?next=/picker" className="text-gold-bright underline-offset-4 hover:underline">Log in</Link> or{' '}
-          <Link href="/register" className="text-gold-bright underline-offset-4 hover:underline">create a free account</Link> to save this ticket.
+          <Link href="/register" className="text-gold-bright underline-offset-4 hover:underline">create a free account</Link> to place tickets with free points.
         </p>
       ) : null}
 

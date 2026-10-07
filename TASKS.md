@@ -27,6 +27,7 @@ Done in part 3:
 Done in part 4 (not yet run against real MySQL):
 - [x] Saved tickets are tagged with the next upcoming draw (saved_sets.draw_no); /account shows each ticket's result once that draw is published; admin draw page lists saved tickets per draw with matches. Information only: no wallets, payments or payouts (see CLAUDE.md).
 - [x] Free play points (not money): sign-up bonus, daily claim, ticket costs points, winnings paid in points when a draw is published (each ticket pays once), admin can grant/remove points and set costs and prize points. Branch nextjs only; not yet on main or tested on real MySQL.
+- [x] Picker: multi-ticket slip (Add another ticket), Place N tickets charges points in one transaction, balance shown on home and /picker. nextjs branch.
 
 Todo (in order):
 1. Deploy branch `nextjs` to a STAGING site on Hostinger (staging.marksixhub.com, its own new database, BASE_URL=https://staging.marksixhub.com). Walk through: register, login, admin draw add/publish, CSV import, FAQ edit, settings, maintenance. Fix any SQL errors from the runtime logs.
