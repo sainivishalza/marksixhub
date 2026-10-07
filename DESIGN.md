@@ -26,3 +26,9 @@ Below: latest result as a ticket stub (perforated edge) with a "check my numbers
 - Jackpot as a card replaced with a large serif figure.
 - Brief's tip about 5 colour ranges conflicts with real Mark Six (red/blue/green sets): kept the real sets.
 - "Optional extra number" in the picker is not part of how Mark Six bets work (extra is only drawn), so it is not in the picker. "Free forever"/"Official format" badges reworded to claims we can stand behind.
+
+## Customer account (/account)
+- One job: show at a glance what I have (points), what is happening to my entries, and what to do next. Four sections: Overview, Orders, Points, Settings. Sidebar on large screens, scrolling pills on phones.
+- An order is a ticket slip: the draw number is the heading, status is one word (Pending approval, Accepted, Won, Result in, Rejected, Refunded), a three-step bar (Submitted, Accepted, Result) shows progress, and once a result is in the winning numbers stay bright while the rest fade.
+- Status colours mean the same everywhere: gold waiting, blue accepted, green won, grey closed. Same tokens as the rest of the site; no new colours.
+- Log in and sign up share one frame (title, form, what an account gives you). No money imagery anywhere: points are free play credits.

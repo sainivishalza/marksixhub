@@ -1,65 +1,54 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { RowDataPacket } from 'mysql2/promise';
-import { BallRow } from '@/components/ball';
+import { ChevronLeft, Clock, Download } from 'lucide-react';
+import { OrderCard } from '@/components/account/order-card';
+import { buttonVariants } from '@/components/ui/button';
+import { getOrder } from '@/lib/account-data';
 import { requireUser } from '@/lib/auth';
-import { query } from '@/lib/db';
-import { parseNumbers } from '@/lib/mark6';
 
 export const metadata: Metadata = { title: 'Order receipt', robots: { index: false, follow: false } };
 
-export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const id = parseInt((await params).id, 10);
   const user = await requireUser(`/account/orders/${id}`);
-  const [order] = Number.isInteger(id)
-    ? await query<RowDataPacket & { draw_no: string; tickets: number; points: number; refunded: number; status: string; created_at: string; order_no: string | null }>('SELECT draw_no, tickets, points, refunded, status, created_at, order_no FROM orders WHERE id=? AND user_id=?', [id, user.id])
-    : [];
+  const order = Number.isInteger(id) ? await getOrder(user.id, id) : null;
   if (!order) notFound();
-  const sets = await query<RowDataPacket & { nums: string; units: number; settled: number; won_points: number }>('SELECT nums, units, settled, won_points FROM saved_sets WHERE order_id=? AND user_id=? ORDER BY id', [id, user.id]);
-  const again = sets.map((s) => s.nums).join('|');
+
   return (
-    <div className="mx-auto max-w-xl px-4 py-12 sm:px-6">
-      <h1 className="text-3xl">Order No. {order.order_no ?? id}</h1>
-      <p className="mt-2 text-mute">
-        Draw {order.draw_no}. Placed {String(order.created_at).slice(0, 16)} UTC. {order.tickets} ticket{order.tickets === 1 ? '' : 's'}, {order.points} points.
-      </p>
-      <p className="mt-3 text-sm">
-        Status:{' '}
-        <strong className={order.status === 'pending' ? 'text-gold-bright' : order.status === 'accepted' ? 'text-win' : 'text-mute'}>
-          {order.status === 'pending' ? 'Pending, waiting for admin approval' : order.status === 'accepted' ? 'Accepted, waiting for the result' : order.status === 'rejected' ? 'Rejected, points returned' : 'Refunded, points returned'}
-        </strong>
-      </p>
-      {order.status === 'pending' ? (
-        <p className="mt-6 rounded-xl border border-gold/50 p-4 text-sm text-ivory">
-          Your numbers are waiting for the admin to accept them. Your receipt is issued here as soon as they do, and you can download it then.
-        </p>
-      ) : null}
-      {order.status === 'accepted' ? (
-      <div className="mt-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/account/orders/${id}/receipt`} alt={`Receipt for order ${order.order_no ?? id}, draw ${order.draw_no}, ${order.tickets} ticket${order.tickets === 1 ? '' : 's'}, ${order.points} points`} className="mx-auto w-full max-w-[420px] rounded-md bg-white shadow-panel" />
-        <p className="mt-3 text-center">
-          <a href={`/account/orders/${id}/receipt?download=1`} className="inline-flex h-11 items-center rounded-xl bg-gold px-5 text-sm font-medium text-night hover:bg-gold-bright">Download receipt (PNG)</a>
-        </p>
+    <div className="space-y-6">
+      <div>
+        <Link href="/account/orders" className="inline-flex items-center gap-1 text-sm text-mute hover:text-gold-bright"><ChevronLeft aria-hidden className="h-4 w-4" />All orders</Link>
+        <h1 className="mt-2 text-3xl sm:text-4xl">Order No. {order.orderNo}</h1>
       </div>
-      ) : null}
-      <ul className="mt-8 divide-y divide-line/50 rounded-2xl border border-line">
-        {sets.map((s, i) => (
-          <li key={i} className="p-4">
-            <BallRow numbers={parseNumbers(s.nums)} size="sm" />
-            <p className="mt-2 text-xs text-mute">
-              {s.units > 1 ? `Multiple entry, ${s.units} tickets. ` : ''}
-              {s.settled ? (s.won_points ? `Won ${s.won_points} points.` : 'No prize.') : 'Result pending.'}
-            </p>
-          </li>
-        ))}
-        {sets.length === 0 ? <li className="p-4 text-sm text-mute">No tickets left on this order.</li> : null}
-      </ul>
-      <p className="mt-6 flex flex-wrap gap-4 text-sm">
-        {sets.length ? <Link href={`/picker?t=${again}`} className="text-gold-bright underline-offset-4 hover:underline">Play these again</Link> : null}
-        <Link href="/account" className="text-gold-bright underline-offset-4 hover:underline">Back to My account</Link>
-      </p>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+        <section aria-label="Receipt">
+          {order.status === 'accepted' ? (
+            <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/account/orders/${order.id}/receipt`} alt={`Receipt for order ${order.orderNo}, draw ${order.drawNo}, ${order.tickets} ticket${order.tickets === 1 ? '' : 's'}, ${order.points} points`} className="w-full max-w-[420px] rounded-md bg-white shadow-panel" />
+              <a href={`/account/orders/${order.id}/receipt?download=1`} className={`${buttonVariants({ size: 'md' })} mt-4 w-full max-w-[420px]`}>
+                <Download aria-hidden className="h-4 w-4" />Download receipt (PNG)
+              </a>
+            </div>
+          ) : order.status === 'pending' ? (
+            <div className="rounded-2xl border border-gold/50 bg-gold/5 p-5">
+              <p className="flex items-center gap-2 font-medium text-ivory"><Clock aria-hidden className="h-4 w-4 text-gold-bright" />Waiting for approval</p>
+              <p className="mt-2 text-sm text-mute">
+                Your numbers are waiting for the admin to accept them. Your receipt is issued here as soon as they do, and you can download it then. We also email you.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-line p-5">
+              <p className="font-medium text-ivory">No receipt for this order</p>
+              <p className="mt-2 text-sm text-mute">Receipts are issued for accepted orders only. The points from this order are back in your balance.</p>
+            </div>
+          )}
+        </section>
+
+        <OrderCard order={order} detail />
+      </div>
     </div>
   );
 }

@@ -143,7 +143,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
     return { points: Number(u.points), orderId, orderNo };
   });
   if (left === null) return { ok: false, message: `You need ${cost} points for ${label}. Claim your free daily points in My account.` };
-  revalidatePath('/account');
+  revalidatePath('/account', 'layout');
   return { ok: true, points: left.points, orderId: left.orderId, message: `Order ${left.orderNo} submitted: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left. Your receipt is issued when the admin accepts it.` };
 }
 
@@ -161,13 +161,13 @@ export async function claimDailyAction() {
     const bonus = dailyPoints + 10 * (Math.min(Number(u.streak), 7) - 1); // +10 per day of streak, up to day 7
     await addPoints(user.id, bonus, `Daily free points (day ${u.streak} streak)`);
   }
-  revalidatePath('/account');
+  revalidatePath('/account', 'layout');
 }
 
 export async function saveNicknameAction(fd: FormData) {
   const user = await requireUser();
   const nick = text(fd, 'nickname').trim();
-  const bad = (msg: string): never => redirect(`/account?nick=${encodeURIComponent(msg)}`);
+  const bad = (msg: string): never => redirect(`/account/settings?nick=${encodeURIComponent(msg)}`);
   if (nick && !/^[A-Za-z0-9_-]{3,20}$/.test(nick)) bad('Use 3 to 20 letters, numbers, - or _.');
   try {
     await exec('UPDATE users SET nickname=? WHERE id=?', [nick || null, user.id]);
@@ -175,13 +175,13 @@ export async function saveNicknameAction(fd: FormData) {
     if ((err as { code?: string }).code === 'ER_DUP_ENTRY') bad('That nickname is taken.');
     throw err;
   }
-  redirect(`/account?nick=${encodeURIComponent(nick ? 'Saved. You are on the leaderboard.' : 'Removed. You are off the leaderboard.')}`);
+  redirect(`/account/settings?nick=${encodeURIComponent(nick ? 'Saved. You are on the leaderboard.' : 'Removed. You are off the leaderboard.')}`);
 }
 
 export async function deleteSetAction(fd: FormData) {
   const user = await requireUser();
   await exec('DELETE FROM saved_sets WHERE id=? AND user_id=? AND settled=1', [parseInt(text(fd, 'id'), 10) || 0, user.id]);
-  revalidatePath('/account');
+  revalidatePath('/account', 'layout');
 }
 
 export async function changePasswordAction(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -232,7 +232,7 @@ export async function deleteFavouriteAction(id: number): Promise<{ ok: boolean; 
 export async function dismissWinsAction() {
   const user = await requireUser();
   await exec('UPDATE saved_sets SET notified=1 WHERE user_id=? AND settled=1', [user.id]);
-  revalidatePath('/account');
+  revalidatePath('/account', 'layout');
 }
 
 /* ---------- two-step login (authenticator app) ---------- */
@@ -240,8 +240,8 @@ export async function dismissWinsAction() {
 export async function beginTotpAction() {
   const user = await requireUser();
   await exec('UPDATE users SET totp_secret=?, totp_on=0 WHERE id=? AND totp_on=0', [newTotpSecret(), user.id]);
-  revalidatePath('/account'); // the redirect target equals the current URL, so the page must be refreshed explicitly
-  redirect('/account?two=setup#two-step');
+  revalidatePath('/account', 'layout'); // the redirect target equals the current URL, so the page must be refreshed explicitly
+  redirect('/account/settings?two=setup#two-step');
 }
 
 export async function confirmTotpAction(fd: FormData) {
@@ -249,17 +249,17 @@ export async function confirmTotpAction(fd: FormData) {
   const [u] = await query<RowDataPacket & { totp_secret: string | null }>('SELECT totp_secret FROM users WHERE id=?', [user.id]);
   const ok = u?.totp_secret && verifyTotp(u.totp_secret, text(fd, 'code'));
   if (ok) await exec('UPDATE users SET totp_on=1 WHERE id=?', [user.id]);
-  redirect(`/account?two=${ok ? 'on' : 'bad'}#two-step`);
+  redirect(`/account/settings?two=${ok ? 'on' : 'bad'}#two-step`);
 }
 
 export async function disableTotpAction(fd: FormData) {
   const user = await requireUser();
   const limit = rateLimit(`totp-off:${user.id}`, 5, 15 * 60_000);
-  if (!limit.ok) redirect('/account?two=bad#two-step');
+  if (!limit.ok) redirect('/account/settings?two=bad#two-step');
   const [u] = await query<UserRow>('SELECT id, pass_hash, role, totp_secret FROM users WHERE id=?', [user.id]);
   const ok = u?.totp_secret && (await verifyPassword(text(fd, 'password').slice(0, 200), u.pass_hash)) && verifyTotp(u.totp_secret, text(fd, 'code'));
   if (ok) await exec('UPDATE users SET totp_on=0, totp_secret=NULL WHERE id=?', [user.id]);
-  redirect(`/account?two=${ok ? 'off' : 'bad'}#two-step`);
+  redirect(`/account/settings?two=${ok ? 'off' : 'bad'}#two-step`);
 }
 
 /* ---------- forgot / reset password ---------- */
