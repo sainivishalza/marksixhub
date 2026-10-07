@@ -4,7 +4,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { BallRow } from '@/components/ball';
 import { ChangePasswordForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
-import { claimDailyAction, deleteSetAction } from '@/actions/account';
+import { claimDailyAction, deleteSetAction, dismissWinsAction } from '@/actions/account';
 import { requireUser } from '@/lib/auth';
 import { getCurrentCurrency } from '@/lib/data';
 import { query } from '@/lib/db';
@@ -22,6 +22,7 @@ export default async function AccountPage() {
     getSettings(),
     query<RowDataPacket & { done: number }>('SELECT (last_claim = UTC_DATE()) AS done FROM users WHERE id=?', [user.id]),
   ]);
+  const [win] = await query<RowDataPacket & { n: number | null; draws: string | null }>("SELECT SUM(won_points) AS n, GROUP_CONCAT(DISTINCT draw_no) AS draws FROM saved_sets WHERE user_id=? AND settled=1 AND notified=0 AND won_points>0", [user.id]);
   const [orders, log] = await Promise.all([
     query<RowDataPacket & { id: number; draw_no: string; tickets: number; points: number; refunded: number; created_at: string }>('SELECT id, draw_no, tickets, points, refunded, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 30', [user.id]),
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 25', [user.id]),
@@ -51,6 +52,13 @@ export default async function AccountPage() {
           <Button type="submit" disabled={Boolean(Number(claim?.done))}>{Number(claim?.done) ? 'Claimed today' : `Claim ${settings.dailyPoints} free points`}</Button>
         </form>
       </section>
+
+      {Number(win?.n) ? (
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-win/40 bg-win/10 p-4">
+          <p className="text-win">You won {Number(win.n)} points in draw {win.draws}.</p>
+          <form action={dismissWinsAction}><Button type="submit" size="sm" variant="outline">Dismiss</Button></form>
+        </section>
+      ) : null}
 
       <h2 className="mb-4 mt-10 text-2xl">My orders</h2>
       {orders.length === 0 && sets.length === 0 ? (

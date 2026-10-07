@@ -38,7 +38,7 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-type UserRow = RowDataPacket & { id: number; email: string; role: Role; currency: string; pass_hash: string };
+type UserRow = RowDataPacket & { id: number; email: string; role: Role; currency: string; pass_hash: string; blocked: number };
 
 /** The signed-in user, or null. Cached per request. */
 export const getUser = cache(async (): Promise<User | null> => {
@@ -49,9 +49,9 @@ export const getUser = cache(async (): Promise<User | null> => {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ['HS256'] });
-    const rows = await query<UserRow>('SELECT id, email, role, currency, pass_hash FROM users WHERE id=?', [Number(payload.sub)]);
+    const rows = await query<UserRow>('SELECT id, email, role, currency, pass_hash, blocked FROM users WHERE id=?', [Number(payload.sub)]);
     const u = rows[0];
-    if (!u || payload.pv !== fingerprint(u.pass_hash)) return null;
+    if (!u || u.blocked || payload.pv !== fingerprint(u.pass_hash)) return null;
     return { id: u.id, email: u.email, role: u.role, currency: u.currency };
   } catch {
     return null;

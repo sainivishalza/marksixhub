@@ -23,6 +23,9 @@ export default async function DashboardPage() {
         <StatCard label="Registered users" value={d.users} />
         <StatCard label="Published draws" value={d.published} hint={`${d.upcoming} upcoming`} />
         <StatCard label="Saved sets today" value={d.picksToday} />
+        <StatCard label="Orders today" value={d.ordersToday} hint={`${d.ticketsToday} tickets`} />
+        <StatCard label="Points held by users" value={d.pointsHeld} />
+        <StatCard label="Points paid as winnings" value={d.pointsWon} hint="All time" />
         <StatCard label="Page views" value="Not tracked" hint="Add Plausible or Umami for visitor stats" />
       </div>
 

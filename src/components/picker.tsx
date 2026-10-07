@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Copy, Eraser, Plus, Share2, Sparkles, Ticket, X } from 'lucide-react';
-import { placeTicketsAction } from '@/actions/account';
+import { Copy, Eraser, Heart, Plus, Share2, Sparkles, Ticket, X } from 'lucide-react';
+import { deleteFavouriteAction, placeTicketsAction, saveFavouriteAction, type Favourite } from '@/actions/account';
 import { Button } from '@/components/ui/button';
 import { NumberBall, ballClass, ringClass } from '@/components/ball';
 import { ALL_BALLS, DIVISION_LABEL, MAX_MULTI, evaluate, isBall, quickPick, sortAsc, ticketUnits } from '@/lib/mark6';
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 type LatestDraw = { drawNo: string; numbers: number[]; extra: number | null };
 type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; wallet?: Wallet | null; id?: string };
-type Wallet = { points: number; cost: number; drawNo: string | null; closesAt: string | null };
+type Wallet = { points: number; cost: number; drawNo: string | null; closesAt: string | null; favourites: Favourite[]; unseenWins: number };
 
 const PICK = 6;
 const MAX_ORDER = 20;
@@ -31,6 +31,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
   const [qty, setQty] = useState(5);
   const [slip, setSlip] = useState<number[][]>([]);
   const [points, setPoints] = useState(wallet?.points ?? 0);
+  const [favs, setFavs] = useState<Favourite[]>(wallet?.favourites ?? []);
   const reduce = useReducedMotion();
   const [sel, setSel] = useState<number[]>([]);
   const [cursor, setCursor] = useState(1);
@@ -172,6 +173,26 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
 
   const key = sorted.join(',');
   const cost = (tickets: number[][]) => tickets.reduce((a, t) => a + ticketUnits(t.length), 0) * (wallet?.cost ?? 0);
+
+  const addFavourite = () =>
+    startPlacing(async () => {
+      const res = await saveFavouriteAction(sorted);
+      if (res.favourites) setFavs(res.favourites);
+      setStatus(res.message);
+    });
+
+  const removeFavourite = (favId: number) =>
+    startPlacing(async () => {
+      const res = await deleteFavouriteAction(favId);
+      if (res.favourites) setFavs(res.favourites);
+    });
+
+  const addFavToSlip = (nums: number[]) => {
+    if (slip.length >= MAX_ORDER) return setStatus(`An order holds up to ${MAX_ORDER} entries. Place it first.`);
+    if (slip.some((t) => t.join(',') === nums.join(','))) return setStatus('That ticket is already on your slip.');
+    setSlip([...slip, nums]);
+    setStatus('Favourite added to your slip.');
+  };
 
   const addToSlip = () => {
     if (slip.length >= MAX_ORDER) return setStatus(`An order holds up to ${MAX_ORDER} entries. Place it first.`);
@@ -361,6 +382,12 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
                 </Button>
               </>
             ) : null}
+            {wallet ? (
+              <Button variant="outline" onClick={addFavourite} disabled={!complete || placing}>
+                <Heart aria-hidden className="h-4 w-4" />
+                Favourite
+              </Button>
+            ) : null}
             <Button variant="outline" onClick={addToSlip} disabled={!complete}>
               <Plus aria-hidden className="h-4 w-4" />
               Add to slip
@@ -383,6 +410,33 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {wallet && favs.length ? (
+        <div className="mt-4">
+          <p className="mb-2 text-sm text-mute">My favourites</p>
+          <ul className="space-y-2">
+            {favs.map((f) => (
+              <li key={f.id} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
+                <span className="flex min-w-0 flex-wrap items-center gap-1">
+                  {f.nums.map((n) => <NumberBall key={n} n={n} size="sm" />)}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <button type="button" onClick={() => addFavToSlip(f.nums)} className="text-sm text-gold-bright underline-offset-4 hover:underline">Add to slip</button>
+                  <button type="button" aria-label={`Remove favourite ${f.nums.join(' ')}`} onClick={() => removeFavourite(f.id)} className="text-mute hover:text-ivory">
+                    <X aria-hidden className="h-4 w-4" />
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {wallet?.unseenWins ? (
+        <p className="mt-4 rounded-xl border border-win/40 bg-win/10 p-3 text-sm text-win">
+          You won {wallet.unseenWins} points in a recent draw. <Link href="/account" className="underline underline-offset-4">See your orders</Link>.
+        </p>
       ) : null}
 
       {wallet ? (

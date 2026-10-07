@@ -22,7 +22,7 @@ const text = (fd: FormData, k: string) => (typeof fd.get(k) === 'string' ? (fd.g
 const tooMany = (sec: number) => ({ error: `Too many attempts. Try again in ${Math.ceil(sec / 60)} minute${sec > 60 ? 's' : ''}.` });
 const NO_DB: FormState = { error: 'The database is not connected yet, so accounts are unavailable.' };
 
-type UserRow = RowDataPacket & { id: number; pass_hash: string; role: 'user' | 'viewer' | 'editor' | 'admin' };
+type UserRow = RowDataPacket & { id: number; pass_hash: string; role: 'user' | 'viewer' | 'editor' | 'admin'; blocked?: number };
 
 export async function loginAction(_prev: FormState, fd: FormData): Promise<FormState> {
   if (!dbConfigured) return NO_DB;
@@ -31,9 +31,10 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
 
   const email = text(fd, 'email').trim().toLowerCase().slice(0, 190);
   const password = text(fd, 'password').slice(0, 200);
-  const [user] = await query<UserRow>('SELECT id, pass_hash, role FROM users WHERE email=?', [email]);
+  const [user] = await query<UserRow>('SELECT id, pass_hash, role, blocked FROM users WHERE email=?', [email]);
   const ok = user ? await verifyPassword(password, user.pass_hash) : (await verifyPassword(password, DUMMY_HASH), false);
   if (!ok || !user) return { error: 'Wrong email or password.', email };
+  if (user.blocked) return { error: 'This account has been suspended.', email };
 
   await createSession(user.id, user.pass_hash);
   await touchLogin(user.id);
@@ -139,4 +140,38 @@ export async function changePasswordAction(_prev: FormState, fd: FormData): Prom
   await exec('UPDATE users SET pass_hash=? WHERE id=?', [hash, user.id]);
   await createSession(user.id, hash); // every other session is now signed out
   return { ok: 'Password changed. Other devices have been signed out.' };
+}
+
+export type Favourite = { id: number; nums: number[] };
+const MAX_FAVOURITES = 10;
+
+async function favourites(userId: number): Promise<Favourite[]> {
+  const rows = await query<RowDataPacket & { id: number; nums: string }>('SELECT id, nums FROM favourites WHERE user_id=? ORDER BY id DESC', [userId]);
+  return rows.map((r) => ({ id: r.id, nums: r.nums.split(',').map(Number) }));
+}
+
+export async function saveFavouriteAction(numbers: number[]): Promise<{ ok: boolean; message: string; favourites?: Favourite[] }> {
+  const user = await getUser();
+  if (!user) return { ok: false, message: 'Log in to save favourites.' };
+  const nums = sortAsc([...new Set(Array.isArray(numbers) ? numbers.map(Number) : [])]);
+  if (nums.length < 6 || nums.length > MAX_MULTI || !nums.every(isBall)) return { ok: false, message: 'Choose a full set of numbers first.' };
+  const list = await favourites(user.id);
+  if (list.length >= MAX_FAVOURITES) return { ok: false, message: `You can keep ${MAX_FAVOURITES} favourites. Remove one first.` };
+  const key = nums.join(',');
+  if (list.some((f) => f.nums.join(',') === key)) return { ok: false, message: 'Already in your favourites.' };
+  await exec('INSERT INTO favourites (user_id, nums) VALUES (?,?)', [user.id, key]);
+  return { ok: true, message: 'Saved to your favourites.', favourites: await favourites(user.id) };
+}
+
+export async function deleteFavouriteAction(id: number): Promise<{ ok: boolean; message: string; favourites?: Favourite[] }> {
+  const user = await getUser();
+  if (!user) return { ok: false, message: 'Log in first.' };
+  await exec('DELETE FROM favourites WHERE id=? AND user_id=?', [Number(id) || 0, user.id]);
+  return { ok: true, message: 'Removed.', favourites: await favourites(user.id) };
+}
+
+export async function dismissWinsAction() {
+  const user = await requireUser();
+  await exec('UPDATE saved_sets SET notified=1 WHERE user_id=? AND settled=1', [user.id]);
+  revalidatePath('/account');
 }

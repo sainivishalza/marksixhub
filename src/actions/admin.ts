@@ -285,3 +285,14 @@ export async function refundOrderAction(fd: FormData) {
   await audit(me.id, 'order.refund', `order ${id}, draw ${drawNo}`);
   back(path, 'ok', `Order #${id} refunded.`);
 }
+
+export async function setBlockedAction(fd: FormData) {
+  const me = await requireRole('manage');
+  const id = int(fd, 'id');
+  const blocked = str(fd, 'blocked') === '1';
+  const path = `/admin/users/${id}`;
+  if (id === me.id) back(path, 'error', 'You cannot suspend your own account.');
+  await exec('UPDATE users SET blocked=? WHERE id=?', [blocked ? 1 : 0, id]);
+  await audit(me.id, blocked ? 'user.suspend' : 'user.unsuspend', `user ${id}`);
+  back(path, 'ok', blocked ? 'Account suspended. They are signed out and cannot log in.' : 'Account restored.');
+}

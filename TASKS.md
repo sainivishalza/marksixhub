@@ -30,6 +30,7 @@ Done in part 4 (not yet run against real MySQL):
 - [x] Picker: multi-ticket slip (Add another ticket), Place N tickets charges points in one transaction, balance shown on home and /picker. nextjs branch.
 - [x] Picker modes: Single entry, Multiple entry (7 to 12 numbers = C(n,6) tickets, wins on every combination), Quick pick (choose 1 to 20 random tickets); slip + one order. Orders table; admin /admin/orders per draw: pick count per number, orders with user, numbers, points, result. nextjs branch; not tested on real MySQL.
 - [x] Points history (account + admin user page), admin audit log, admin order refund (upcoming draws only), ordering closes at stop selling time (HK time; end of draw day if none), account order history with Play again. nextjs branch; not tested on real MySQL.
+- [x] Favourite numbers (picker), win notices (picker + account, dismiss), dashboard cards (orders today, points held/won), orders CSV export, suspend/restore users (blocked users are signed out and cannot log in). nextjs branch; not tested on real MySQL.
 
 Todo (in order):
 1. Deploy branch `nextjs` to a STAGING site on Hostinger (staging.marksixhub.com, its own new database, BASE_URL=https://staging.marksixhub.com). Walk through: register, login, admin draw add/publish, CSV import, FAQ edit, settings, maintenance. Fix any SQL errors from the runtime logs.

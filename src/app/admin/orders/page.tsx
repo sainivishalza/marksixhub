@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { NumberBall } from '@/components/ball';
 import { refundOrderAction } from '@/actions/admin';
 import { AdminTable, Notice, PageHeader, Panel, inputClass } from '@/components/admin/ui';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { getDrawOrders, listDrawNos } from '@/lib/admin-data';
 import { can } from '@/lib/perms';
 import { requireRole } from '@/lib/auth';
@@ -30,6 +30,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           </select>
           <Button type="submit" variant="outline">Show</Button>
         </form>
+        {current ? <Link href={`/admin/orders/export?draw=${encodeURIComponent(current.drawNo)}`} className={buttonVariants({ variant: 'outline' })}>Export CSV</Link> : null}
       </PageHeader>
 
       <Notice ok={ok} error={error} />

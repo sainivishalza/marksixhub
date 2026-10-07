@@ -9,7 +9,7 @@ type Count = RowDataPacket & { n: number };
 const num = (v: unknown) => Number(v) || 0;
 
 export async function getDashboard() {
-  const [users, draws, today, perDay, signups, saves, [{ today: todayStr }]] = await Promise.all([
+  const [users, draws, today, perDay, signups, saves, [{ today: todayStr }], [pts], [ordersToday]] = await Promise.all([
     query<Count>('SELECT COUNT(*) AS n FROM users'),
     query<RowDataPacket & { pub: number | null; up: number | null }>("SELECT SUM(status='published') AS pub, SUM(status='upcoming') AS up FROM draws"),
     query<Count>('SELECT COUNT(*) AS n FROM saved_sets WHERE created_at >= CURDATE()'),
@@ -17,6 +17,8 @@ export async function getDashboard() {
     query<RowDataPacket & { email: string; at: string }>('SELECT email, created_at AS at FROM users ORDER BY id DESC LIMIT 6'),
     query<RowDataPacket & { email: string; nums: string; at: string }>('SELECT u.email, s.nums, s.created_at AS at FROM saved_sets s JOIN users u ON u.id = s.user_id ORDER BY s.id DESC LIMIT 6'),
     query<RowDataPacket & { today: string }>('SELECT CURDATE() AS today'),
+    query<RowDataPacket & { held: number | null; won: number | null }>("SELECT (SELECT SUM(points) FROM users) AS held, (SELECT SUM(delta) FROM point_log WHERE reason LIKE 'Won%') AS won"),
+    query<RowDataPacket & { orders: number; tickets: number | null }>('SELECT COUNT(*) AS orders, SUM(tickets) AS tickets FROM orders WHERE created_at >= CURDATE() AND refunded=0'),
   ]);
 
   const counts = new Map(perDay.map((r) => [r.d, num(r.n)]));
@@ -39,6 +41,10 @@ export async function getDashboard() {
     published: num(draws[0].pub),
     upcoming: num(draws[0].up),
     picksToday: num(today[0].n),
+    pointsHeld: num(pts.held),
+    pointsWon: num(pts.won),
+    ordersToday: num(ordersToday.orders),
+    ticketsToday: num(ordersToday.tickets),
     series,
     activity,
   };

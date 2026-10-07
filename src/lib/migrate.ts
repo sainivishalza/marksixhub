@@ -84,6 +84,14 @@ const TABLES = [
     detail VARCHAR(250) NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS favourites (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    nums VARCHAR(40) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS settings (
     k VARCHAR(40) PRIMARY KEY,
     v TEXT NOT NULL
@@ -162,6 +170,12 @@ export async function migrate() {
   }
 
   if (!(await hasColumn('orders', 'refunded'))) await exec('ALTER TABLE orders ADD COLUMN refunded TINYINT(1) NOT NULL DEFAULT 0');
+
+  if (!(await hasColumn('users', 'blocked'))) await exec('ALTER TABLE users ADD COLUMN blocked TINYINT(1) NOT NULL DEFAULT 0');
+  if (!(await hasColumn('saved_sets', 'notified'))) {
+    await exec('ALTER TABLE saved_sets ADD COLUMN notified TINYINT(1) NOT NULL DEFAULT 0');
+    await exec('UPDATE saved_sets SET notified=1'); // only wins from now on are announced
+  }
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
