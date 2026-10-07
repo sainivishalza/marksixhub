@@ -9,9 +9,10 @@ export const metadata = { title: 'Points check' };
 export default async function PointsCheckPage() {
   await requireRole('manage');
   const rows = await query<RowDataPacket & { id: number; email: string; points: number; ledger: number }>(
-    `SELECT u.id, u.email, u.points, COALESCE(SUM(l.delta), 0) AS ledger
-       FROM users u LEFT JOIN point_log l ON l.user_id = u.id
-      GROUP BY u.id HAVING u.points <> ledger ORDER BY ABS(u.points - ledger) DESC LIMIT 200`,
+    `SELECT * FROM (
+       SELECT u.id, u.email, u.points, COALESCE(SUM(l.delta), 0) AS ledger
+         FROM users u LEFT JOIN point_log l ON l.user_id = u.id GROUP BY u.id
+     ) t WHERE points <> ledger ORDER BY ABS(points - ledger) DESC LIMIT 200`,
   );
   const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM users');
   return (

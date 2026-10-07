@@ -228,7 +228,8 @@ export async function dismissWinsAction() {
 export async function beginTotpAction() {
   const user = await requireUser();
   await exec('UPDATE users SET totp_secret=?, totp_on=0 WHERE id=? AND totp_on=0', [newTotpSecret(), user.id]);
-  redirect('/account#two-step');
+  revalidatePath('/account'); // the redirect target equals the current URL, so the page must be refreshed explicitly
+  redirect('/account?two=setup#two-step');
 }
 
 export async function confirmTotpAction(fd: FormData) {
