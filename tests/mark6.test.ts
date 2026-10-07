@@ -84,3 +84,11 @@ test('combinations of 6 inside a set', async () => {
   assert.equal(c.length, 7);
   assert.ok(c.every((x) => x.length === 6 && new Set(x).size === 6));
 });
+
+test('receipt helpers format like a shop receipt', async () => {
+  const { receiptDate, receiptLine, groupRef } = await import('../src/lib/receipt.ts');
+  assert.equal(receiptLine([7, 9, 13, 25, 32, 45]), '7+9+13+25+32+45');
+  assert.equal(receiptDate('2026-10-03 09:30:00'), '03OCT26 17:30'); // UTC to Hong Kong time
+  assert.equal(receiptDate('2026-12-31 20:00:00'), '01JAN27 04:00');
+  assert.equal(groupRef('6a0025fc4789020861c0ffff'), '6A002 5FC47 89020 861C0');
+});

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition, type KeyboardEvent } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Copy, Eraser, Heart, Plus, Share2, Sparkles, Ticket, X } from 'lucide-react';
 import { deleteFavouriteAction, placeTicketsAction, saveFavouriteAction, type Favourite } from '@/actions/account';
@@ -34,6 +35,7 @@ function left(iso: string, now: number) {
 
 export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }: Props) {
   const [placing, startPlacing] = useTransition();
+  const router = useRouter();
   const [receipt, setReceipt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [mode, setMode] = useState<Mode>('single');
@@ -282,6 +284,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       if (res.ok) {
         if (res.points !== undefined) setPoints(res.points);
         setReceipt(res.orderId ?? null);
+        if (res.orderId) router.push(`/account/orders/${res.orderId}`); // straight to the receipt
         setSlip([]);
         setSel([]);
       }

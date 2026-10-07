@@ -30,7 +30,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           {order.status === 'pending' ? 'Pending, waiting for admin approval' : order.status === 'accepted' ? 'Accepted, waiting for the result' : order.status === 'rejected' ? 'Rejected, points returned' : 'Refunded, points returned'}
         </strong>
       </p>
-      <ul className="mt-6 divide-y divide-line/50 rounded-2xl border border-line">
+      <div className="mt-6">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/account/orders/${id}/receipt`} alt={`Receipt for order ${id}, draw ${order.draw_no}, ${order.tickets} ticket${order.tickets === 1 ? '' : 's'}, ${order.points} points`} className="mx-auto w-full max-w-[420px] rounded-md bg-white shadow-panel" />
+        <p className="mt-3 text-center">
+          <a href={`/account/orders/${id}/receipt?download=1`} className="inline-flex h-11 items-center rounded-xl bg-gold px-5 text-sm font-medium text-night hover:bg-gold-bright">Download receipt (PNG)</a>
+        </p>
+      </div>
+      <ul className="mt-8 divide-y divide-line/50 rounded-2xl border border-line">
         {sets.map((s, i) => (
           <li key={i} className="p-4">
             <BallRow numbers={parseNumbers(s.nums)} size="sm" />
