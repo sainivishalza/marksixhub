@@ -9,9 +9,9 @@ export async function GET(request: Request) {
   const draw = new URL(request.url).searchParams.get('draw')?.trim() ?? '';
   const { orders } = await getDrawOrders(draw);
   const csv = toCsv([
-    ['draw', 'order', 'email', 'placed_utc', 'order_points', 'refunded', 'numbers', 'tickets', 'result_points'],
+    ['draw', 'order', 'email', 'placed_utc', 'order_points', 'status', 'refunded', 'numbers', 'tickets', 'result_points'],
     ...orders.flatMap((o) =>
-      (o.tickets.length ? o.tickets : [{ nums: '', units: 0, won: null }]).map((t) => [draw, o.id, o.email, o.createdAt, o.points, o.refunded ? 'yes' : 'no', t.nums.replace(/,/g, ' '), t.units, t.won ?? '']),
+      (o.tickets.length ? o.tickets : [{ nums: '', units: 0, won: null }]).map((t) => [draw, o.id, o.email, o.createdAt, o.points, o.status, o.refunded ? 'yes' : 'no', t.nums.replace(/,/g, ' '), t.units, t.won ?? '']),
     ),
   ]);
   return new Response(csv, {

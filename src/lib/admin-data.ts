@@ -11,7 +11,7 @@ type Count = RowDataPacket & { n: number };
 const num = (v: unknown) => Number(v) || 0;
 
 export async function getDashboard() {
-  const [users, draws, today, perDay, signups, saves, [{ today: todayStr }], [pts], [ordersToday]] = await Promise.all([
+  const [users, draws, today, perDay, signups, saves, [{ today: todayStr }], [pts], [ordersToday], [pendingRow]] = await Promise.all([
     query<Count>('SELECT COUNT(*) AS n FROM users'),
     query<RowDataPacket & { pub: number | null; up: number | null }>("SELECT SUM(status='published') AS pub, SUM(status='upcoming') AS up FROM draws"),
     query<Count>('SELECT COUNT(*) AS n FROM saved_sets WHERE created_at >= CURDATE()'),
@@ -21,6 +21,7 @@ export async function getDashboard() {
     query<RowDataPacket & { today: string }>('SELECT CURDATE() AS today'),
     query<RowDataPacket & { held: number | null; won: number | null }>("SELECT (SELECT SUM(points) FROM users) AS held, (SELECT SUM(delta) FROM point_log WHERE reason LIKE 'Won%') AS won"),
     query<RowDataPacket & { orders: number; tickets: number | null }>('SELECT COUNT(*) AS orders, SUM(tickets) AS tickets FROM orders WHERE created_at >= CURDATE() AND refunded=0'),
+    query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM orders WHERE status='pending'"),
   ]);
 
   const counts = new Map(perDay.map((r) => [r.d, num(r.n)]));
@@ -46,6 +47,7 @@ export async function getDashboard() {
     pointsHeld: num(pts.held),
     pointsWon: num(pts.won),
     ordersToday: num(ordersToday.orders),
+    pendingOrders: num(pendingRow.n),
     ticketsToday: num(ordersToday.tickets),
     series,
     activity,
@@ -115,13 +117,13 @@ export async function listAllFaqs() {
   return rows.map((r) => ({ id: r.id, question: r.question, answer: r.answer, sortOrder: r.sort_order, active: Boolean(r.active) }));
 }
 
-export type OrderRow = { id: number; email: string; createdAt: string; points: number; refunded: boolean; tickets: { nums: string; units: number; won: number | null }[] };
+export type OrderRow = { id: number; email: string; createdAt: string; points: number; refunded: boolean; status: string; tickets: { nums: string; units: number; won: number | null }[] };
 
 /** Everything users placed for one draw: orders (newest first) and how often each number was picked. */
 export async function getDrawOrders(drawNo: string) {
   const [orders, tickets] = await Promise.all([
-    query<RowDataPacket & { id: number; email: string; created_at: string; points: number; refunded: number }>(
-      'SELECT o.id, u.email, o.created_at, o.points, o.refunded FROM orders o JOIN users u ON u.id = o.user_id WHERE o.draw_no=? ORDER BY o.id DESC LIMIT 500',
+    query<RowDataPacket & { id: number; email: string; created_at: string; points: number; refunded: number; status: string }>(
+      'SELECT o.id, u.email, o.created_at, o.points, o.refunded, o.status FROM orders o JOIN users u ON u.id = o.user_id WHERE o.draw_no=? ORDER BY o.id DESC LIMIT 500',
       [drawNo],
     ),
     query<RowDataPacket & { order_id: number; nums: string; units: number; settled: number; won_points: number }>(
@@ -138,7 +140,7 @@ export async function getDrawOrders(drawNo: string) {
     byOrder.set(t.order_id, list);
   }
   return {
-    orders: orders.map((o): OrderRow => ({ id: o.id, email: o.email, createdAt: String(o.created_at), points: num(o.points), refunded: Boolean(o.refunded), tickets: byOrder.get(o.id) ?? [] })),
+    orders: orders.map((o): OrderRow => ({ id: o.id, email: o.email, createdAt: String(o.created_at), points: num(o.points), refunded: Boolean(o.refunded), status: o.status, tickets: byOrder.get(o.id) ?? [] })),
     freq,
     ticketCount: tickets.reduce((a, t) => a + num(t.units), 0),
   };
@@ -154,10 +156,10 @@ export async function listDrawNos(): Promise<{ drawNo: string; status: string; n
 /** Where a draw stands, for the checklist on its edit page. */
 export async function getDrawChecklist(drawNo: string) {
   const [[o], [t]] = await Promise.all([
-    query<RowDataPacket & { orders: number; tickets: number | null; points: number | null }>('SELECT COUNT(*) AS orders, SUM(tickets) AS tickets, SUM(points) AS points FROM orders WHERE draw_no=? AND refunded=0', [drawNo]),
+    query<RowDataPacket & { orders: number; tickets: number | null; points: number | null; pending: number | null }>("SELECT COUNT(*) AS orders, SUM(tickets) AS tickets, SUM(points) AS points, SUM(status='pending') AS pending FROM orders WHERE draw_no=? AND refunded=0", [drawNo]),
     query<RowDataPacket & { waiting: number }>('SELECT COUNT(*) AS waiting FROM saved_sets WHERE draw_no=? AND settled=0', [drawNo]),
   ]);
-  return { orders: num(o.orders), tickets: num(o.tickets), points: num(o.points), waiting: num(t.waiting) };
+  return { orders: num(o.orders), tickets: num(o.tickets), points: num(o.points), pending: num(o.pending), waiting: num(t.waiting) };
 }
 
 /** Things worth a look: unusual points activity, refunds, sign-up bursts, failed logins, negative balances. */
@@ -178,7 +180,7 @@ export async function getAlerts(): Promise<string[]> {
   return out;
 }
 
-/** What publishing a result would pay, without paying anything. Counts every unsettled ticket for the draw. */
+/** What publishing a result would pay, without paying anything. Counts every unsettled ticket for the draw, pending orders included (they must be approved before publishing). */
 export async function previewPayout(drawNo: string, numbers: number[], extra: number) {
   const { prizePoints } = await getSettings();
   const rows = await query<RowDataPacket & { nums: string }>('SELECT nums FROM saved_sets WHERE draw_no=? AND settled=0', [drawNo]);

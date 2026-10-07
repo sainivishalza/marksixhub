@@ -23,7 +23,7 @@ export default async function EditDrawPage({ params, searchParams }: { params: P
   const published = found.draw.status === 'published';
   const steps: [boolean, string][] = [
     [true, 'Draw announced'],
-    [published ? true : false, `Orders: ${c.orders} orders, ${c.tickets} tickets, ${c.points} points (check them under Orders for this draw)`],
+    [c.pending === 0, c.pending ? `${c.pending} of ${c.orders} orders still need approval (Orders for this draw). You cannot publish until they are approved or rejected.` : `Orders: ${c.orders} orders, ${c.tickets} tickets, ${c.points} points, all approved`],
     [published && found.draw.numbers.length === 6, 'Winning numbers and extra entered'],
     [published, c.waiting ? `Set the status to Published and save: ${c.waiting} tickets will be paid in points automatically` : 'Published: points for every ticket have been paid'],
   ];

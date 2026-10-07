@@ -21,6 +21,11 @@ const back = (path: string, kind: 'ok' | 'error', msg: string): never => redirec
 
 /* ---------- draws ---------- */
 
+async function pendingOrders(drawNo: string) {
+  const [r] = await query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM orders WHERE draw_no=? AND status='pending'", [drawNo]);
+  return Number(r.n);
+}
+
 /** `n` changes on every failed save so the form remounts and shows exactly what was typed (React 19 resets forms after an action). */
 export type DrawFormState = { errors?: string[]; raw?: Record<string, string>; n?: number };
 
@@ -61,6 +66,10 @@ export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promis
   if (errors.length) return { errors, raw, n: Date.now() };
 
   const id = int(fd, 'id');
+  if (value.status === 'published') {
+    const pending = await pendingOrders(value.drawNo);
+    if (pending) return { errors: [`${pending} order${pending === 1 ? ' is' : 's are'} still waiting for approval for this draw. Approve or reject them on the Orders page first.`], raw, n: Date.now() };
+  }
   const [old] = await query<RowDataPacket & { nums: string | null; extra: number | null }>('SELECT nums, extra FROM draws WHERE draw_no=?', [value.drawNo]);
   const newNums = value.status === 'published' ? [...value.numbers].sort((a, b) => a - b).join(',') : null;
   const newExtra = value.status === 'published' ? value.extra : null;
@@ -98,6 +107,8 @@ export async function toggleDrawStatusAction(fd: FormData) {
     back('/admin/draws', 'ok', `Draw ${d.draw_no} is now a draft (hidden from the public).${undone ? ` Points paid to ${undone} users were taken back.` : ''}`);
   }
   if (!d.nums || !d.extra) back('/admin/draws', 'error', `Draw ${d.draw_no} has no winning numbers yet. Edit it first.`);
+  const pending = await pendingOrders(d.draw_no);
+  if (pending) back('/admin/draws', 'error', `${pending} order${pending === 1 ? ' is' : 's are'} still waiting for approval for draw ${d.draw_no}. Approve or reject them first (Orders page).`);
   await exec("UPDATE draws SET status='published' WHERE id=?", [id]);
   await settleTickets();
   await audit(me.id, 'draw.publish', d.draw_no);
@@ -270,27 +281,48 @@ export async function grantPointsAction(fd: FormData) {
   back('/admin/users', ok ? 'ok' : 'error', ok ? 'Points updated.' : 'That would take the balance below zero.');
 }
 
-/** Cancels an order for a draw that has not been published yet and returns its points. */
+const ordersPath = (drawNo: string) => `/admin/orders?draw=${encodeURIComponent(drawNo)}`;
+
+/** Approves one order: its numbers are now accepted and wait for the result. */
+export async function approveOrderAction(fd: FormData) {
+  const me = await requireRole('support');
+  const id = int(fd, 'id');
+  const drawNo = str(fd, 'draw');
+  const res = await exec("UPDATE orders SET status='accepted' WHERE id=? AND status='pending' AND refunded=0", [id]);
+  if (!res.affectedRows) back(ordersPath(drawNo), 'error', 'That order is not waiting for approval.');
+  await audit(me.id, 'order.approve', `order ${id}, draw ${drawNo}`);
+  back(ordersPath(drawNo), 'ok', `Order #${id} approved.`);
+}
+
+export async function approveAllAction(fd: FormData) {
+  const me = await requireRole('support');
+  const drawNo = str(fd, 'draw');
+  const res = await exec("UPDATE orders SET status='accepted' WHERE draw_no=? AND status='pending' AND refunded=0", [drawNo]);
+  await audit(me.id, 'order.approve_all', `${res.affectedRows} orders, draw ${drawNo}`);
+  back(ordersPath(drawNo), 'ok', `${res.affectedRows} orders approved.`);
+}
+
+/** Rejects a pending order or refunds an accepted one (draw not published yet): the tickets are removed and the points go back. */
 export async function refundOrderAction(fd: FormData) {
   const me = await requireRole('support');
   const id = int(fd, 'id');
   const drawNo = str(fd, 'draw');
-  const path = `/admin/orders?draw=${encodeURIComponent(drawNo)}`;
+  const reject = str(fd, 'decision') === 'reject';
   const done = await tx(async (t) => {
     const [o] = await t.query<RowDataPacket & { user_id: number; points: number; draw_no: string }>(
       "SELECT o.user_id, o.points, o.draw_no FROM orders o JOIN draws d ON d.draw_no = o.draw_no AND d.status='upcoming' WHERE o.id=? AND o.refunded=0 FOR UPDATE",
       [id],
     );
     if (!o) return false;
-    await t.exec('UPDATE orders SET refunded=1 WHERE id=?', [id]);
+    await t.exec('UPDATE orders SET refunded=1, status=? WHERE id=?', [reject ? 'rejected' : 'refunded', id]);
     await t.exec('DELETE FROM saved_sets WHERE order_id=? AND settled=0', [id]);
     await t.exec('UPDATE users SET points = points + ? WHERE id=?', [o.points, o.user_id]);
-    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [o.user_id, o.points, `Refund order #${id}`]);
+    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [o.user_id, o.points, `${reject ? 'Order rejected' : 'Refund'} #${id}`]);
     return true;
   });
-  if (!done) back(path, 'error', 'That order cannot be refunded (already refunded, or its draw is published).');
-  await audit(me.id, 'order.refund', `order ${id}, draw ${drawNo}`);
-  back(path, 'ok', `Order #${id} refunded.`);
+  if (!done) back(ordersPath(drawNo), 'error', 'That order cannot be changed (already refunded, or its draw is published).');
+  await audit(me.id, reject ? 'order.reject' : 'order.refund', `order ${id}, draw ${drawNo}`);
+  back(ordersPath(drawNo), 'ok', reject ? `Order #${id} rejected and the points returned.` : `Order #${id} refunded.`);
 }
 
 export async function setBlockedAction(fd: FormData) {

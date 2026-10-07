@@ -200,6 +200,9 @@ export async function migrate() {
 
   if (!(await hasColumn('users', 'totp_secret'))) await exec('ALTER TABLE users ADD COLUMN totp_secret VARCHAR(40) NULL, ADD COLUMN totp_on TINYINT(1) NOT NULL DEFAULT 0');
 
+  // Orders placed before approvals existed count as accepted.
+  if (!(await hasColumn('orders', 'status'))) await exec("ALTER TABLE orders ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'accepted', ADD KEY idx_status (status)");
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 

@@ -26,7 +26,9 @@ export async function settleTickets() {
   const { prizePoints } = await getSettings();
   const rows = await query<RowDataPacket & { id: number; user_id: number; nums: string; draw_no: string; w: string; extra: number | null }>(
     `SELECT s.id, s.user_id, s.nums, s.draw_no, d.nums AS w, d.extra FROM saved_sets s
-       JOIN draws d ON d.draw_no = s.draw_no AND d.status='published' AND d.nums IS NOT NULL WHERE s.settled=0`,
+       JOIN draws d ON d.draw_no = s.draw_no AND d.status='published' AND d.nums IS NOT NULL
+       LEFT JOIN orders o ON o.id = s.order_id
+      WHERE s.settled=0 AND (o.id IS NULL OR o.status='accepted')`,
   );
   for (const r of rows) {
     // A multiple entry wins on every 6-number combination inside it.

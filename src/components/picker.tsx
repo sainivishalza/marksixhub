@@ -143,6 +143,24 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
     return () => window.clearInterval(t);
   }, [wallet?.closesAt]);
 
+  // Tickets on the slip survive a reload and the trip through login or sign-up.
+  const slipLoaded = useRef(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('mh_slip') ?? '[]');
+      const valid = (Array.isArray(saved) ? saved : [])
+        .slice(0, MAX_ORDER)
+        .filter((t: unknown): t is number[] => Array.isArray(t) && t.length === PICK && t.every((n) => isBall(Number(n))));
+      if (valid.length && !new URLSearchParams(window.location.search).get('t')) setSlip(valid);
+    } catch {
+      /* nothing saved */
+    }
+    slipLoaded.current = true;
+  }, []);
+  useEffect(() => {
+    if (slipLoaded.current) saveSlip(slip);
+  }, [slip]);
+
   // A shared link such as /picker?n=3,12,25,31,40,49 preloads the ticket.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -243,6 +261,20 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
   };
 
   const orders = mode !== 'quick' && complete && !slip.some((t) => t.join(',') === key) ? [...slip, sorted] : slip;
+  const saveSlip = (tickets: number[][]) => {
+    try {
+      window.localStorage.setItem('mh_slip', JSON.stringify(tickets));
+    } catch {
+      /* private mode: the tickets just will not be remembered */
+    }
+  };
+
+  // Not logged in: keep the tickets, then send the person to log in and come back here.
+  const submitAsGuest = () => {
+    saveSlip(orders);
+    window.location.href = '/login?next=/picker';
+  };
+
   const place = () =>
     startPlacing(async () => {
       const res = await placeTicketsAction(orders);
@@ -472,15 +504,22 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
           </p>
           <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo}>
             <Ticket aria-hidden className="h-4 w-4" />
-            {placing ? 'Placing...' : orders.length ? `Place order: ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${cost(orders)} points)` : 'Place order'}
+            {placing ? 'Submitting...' : orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${cost(orders)} points)` : 'Submit order'}
           </Button>
+          <p className="mt-2 text-xs text-mute">Points are taken when you submit. Your order shows as Pending in My account until the admin approves it, then Accepted until the result.</p>
         </div>
-      ) : complete || slip.length ? (
-        <p className="mt-3 text-sm text-mute">
-          <Link href="/login?next=/picker" className="text-gold-bright underline-offset-4 hover:underline">Log in</Link> or{' '}
-          <Link href="/register" className="text-gold-bright underline-offset-4 hover:underline">create a free account</Link> to place tickets with free points.
-        </p>
-      ) : null}
+      ) : (
+        <div className="mt-4 rounded-xl border border-gold/30 p-3">
+          <p className="text-sm text-mute">Log in or create a free account to submit your numbers. Your tickets are kept while you do.</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <Button onClick={submitAsGuest} disabled={!orders.length}>
+              <Ticket aria-hidden className="h-4 w-4" />
+              {orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'}` : 'Submit order'}
+            </Button>
+            {orders.length ? <Link href="/register" onClick={() => saveSlip(orders)} className="text-sm text-gold-bright underline-offset-4 hover:underline">Create a free account</Link> : null}
+          </div>
+        </div>
+      )}
 
       <p role="status" aria-live="polite" className="mt-3 min-h-[1.25rem] text-sm text-mute">
         {status}

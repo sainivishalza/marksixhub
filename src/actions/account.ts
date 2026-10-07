@@ -123,7 +123,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
     const res = await t.exec('UPDATE users SET points = points - ? WHERE id=? AND points >= ?', [cost, user.id, cost]);
     if (!res.affectedRows) return null;
     await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [user.id, -cost, `${label}, draw ${next.draw_no}`]);
-    const orderId = (await t.exec('INSERT INTO orders (user_id, draw_no, tickets, points) VALUES (?,?,?,?)', [user.id, next.draw_no, total, cost])).insertId;
+    const orderId = (await t.exec("INSERT INTO orders (user_id, draw_no, tickets, points, status) VALUES (?,?,?,?,'pending')", [user.id, next.draw_no, total, cost])).insertId;
     for (const tk of tickets) {
       await t.exec('INSERT INTO saved_sets (user_id, nums, draw_no, order_id, units) VALUES (?,?,?,?,?)', [user.id, sortAsc(tk).join(','), next.draw_no, orderId, 1]);
     }
@@ -132,7 +132,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
   });
   if (left === null) return { ok: false, message: `You need ${cost} points for ${label}. Claim your free daily points in My account.` };
   revalidatePath('/account');
-  return { ok: true, points: left.points, orderId: left.orderId, message: `Order placed: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left.` };
+  return { ok: true, points: left.points, orderId: left.orderId, message: `Order submitted: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left. It is pending until the admin approves it.` };
 }
 
 export async function claimDailyAction() {

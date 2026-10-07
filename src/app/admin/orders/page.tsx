@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { NumberBall } from '@/components/ball';
-import { refundOrderAction } from '@/actions/admin';
+import { approveAllAction, approveOrderAction, refundOrderAction } from '@/actions/admin';
 import { AdminTable, Notice, PageHeader, Panel, inputClass } from '@/components/admin/ui';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { getDrawOrders, listDrawNos } from '@/lib/admin-data';
@@ -19,7 +19,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const { orders, freq, ticketCount } = current ? await getDrawOrders(current.drawNo) : { orders: [], freq: [] as number[], ticketCount: 0 };
   const winning = current?.nums ? parseNumbers(current.nums) : [];
   const max = Math.max(1, ...freq.slice(1));
-  const points = orders.reduce((a, o) => a + o.points, 0);
+  const points = orders.filter((o) => !o.refunded).reduce((a, o) => a + o.points, 0);
+  const pending = orders.filter((o) => o.status === 'pending').length;
+  const canAct = can(me.role, 'support') && current?.status === 'upcoming';
 
   return (
     <>
@@ -34,6 +36,17 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       </PageHeader>
 
       <Notice ok={ok} error={error} />
+      {pending ? (
+        <form action={approveAllAction} className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-gold/40 p-4">
+          <p className="text-sm text-ivory">{pending} order{pending === 1 ? ' is' : 's are'} waiting for approval. Buyers see them as Pending until you accept.</p>
+          {canAct && current ? (
+            <>
+              <input type="hidden" name="draw" value={current.drawNo} />
+              <Button type="submit" size="sm">Approve all {pending}</Button>
+            </>
+          ) : null}
+        </form>
+      ) : null}
       {!current ? (
         <p className="text-mute">No draws yet.</p>
       ) : (
@@ -64,7 +77,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
           <AdminTable
             caption={`Orders for draw ${current.drawNo}`}
-            head={['Order', 'User', 'Placed (UTC)', 'Points', 'Numbers', '']}
+            head={['Order', 'User', 'Placed (UTC)', 'Status', 'Points', 'Numbers', '']}
             empty={orders.length === 0 ? <p className="p-6 text-sm text-mute">No orders for this draw yet.</p> : null}
           >
             {orders.map((o) => (
@@ -72,9 +85,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <th scope="row" className="px-4 py-3 font-mono">#{o.id}</th>
                 <td className="max-w-[14rem] truncate px-4 py-3">{o.email}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-mute">{o.createdAt.slice(0, 16)}</td>
+                <td className="px-4 py-3">
+                  <span className={cn('rounded-full border px-2 py-0.5 text-xs', o.status === 'pending' ? 'border-gold/60 text-gold-bright' : o.status === 'accepted' ? 'border-win/50 text-win' : 'border-line text-mute')}>{o.status}</span>
+                </td>
                 <td className="px-4 py-3 font-mono tabular-nums">{o.points}</td>
                 <td className="px-4 py-3">
-                  {o.refunded ? <p className="text-sm text-mute">Refunded, {o.points} points returned.</p> : null}
+                  {o.refunded ? <p className="text-sm text-mute">{o.status === 'rejected' ? 'Rejected' : 'Refunded'}, {o.points} points returned.</p> : null}
                   <ul className="space-y-2">
                     {o.tickets.map((t, i) => (
                       <li key={i} className="flex flex-wrap items-center gap-1.5">
@@ -86,12 +102,22 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </ul>
                 </td>
                 <td className="px-4 py-3">
-                  {can(me.role, 'support') && current.status === 'upcoming' && !o.refunded ? (
-                    <form action={refundOrderAction}>
-                      <input type="hidden" name="id" value={o.id} />
-                      <input type="hidden" name="draw" value={current.drawNo} />
-                      <Button type="submit" size="sm" variant="outline">Refund</Button>
-                    </form>
+                  {canAct && !o.refunded ? (
+                    <div className="flex flex-wrap gap-2">
+                      {o.status === 'pending' ? (
+                        <form action={approveOrderAction}>
+                          <input type="hidden" name="id" value={o.id} />
+                          <input type="hidden" name="draw" value={current.drawNo} />
+                          <Button type="submit" size="sm">Approve</Button>
+                        </form>
+                      ) : null}
+                      <form action={refundOrderAction}>
+                        <input type="hidden" name="id" value={o.id} />
+                        <input type="hidden" name="draw" value={current.drawNo} />
+                        {o.status === 'pending' ? <input type="hidden" name="decision" value="reject" /> : null}
+                        <Button type="submit" size="sm" variant="outline">{o.status === 'pending' ? 'Reject' : 'Refund'}</Button>
+                      </form>
+                    </div>
                   ) : null}
                 </td>
               </tr>
