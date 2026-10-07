@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { NumberBall } from '@/components/ball';
 import { JsonLd } from '@/components/json-ld';
+import { NumberBoxes } from '@/components/number-boxes';
 import { Button } from '@/components/ui/button';
 import { getUser } from '@/lib/auth';
 import { getDraws } from '@/lib/data';
@@ -28,10 +29,10 @@ export default async function CheckPage({ searchParams }: { searchParams: Promis
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="text-4xl sm:text-5xl">Did your numbers ever win?</h1>
-      <p className="mb-6 mt-3 max-w-[60ch] text-mute">Type six numbers from 1 to 49. We check them against the Mark Six results you can see. Unlock older results to check further back. For fun only: past results say nothing about the next draw.</p>
-      <form className="flex flex-wrap gap-2">
-        <input name="n" defaultValue={raw} placeholder="3 12 25 31 40 49" aria-label="Your six numbers" className="h-11 w-64 rounded-xl border border-line bg-night px-4 font-mono text-ivory placeholder:text-mute/60" />
-        <Button type="submit">Check</Button>
+      <p className="mb-6 mt-3 max-w-[60ch] text-mute">Put one number in each circle, from 1 to 49. We check them against the Mark Six results you can see. Unlock older results to check further back. For fun only: past results say nothing about the next draw.</p>
+      <form className="space-y-3">
+        <NumberBoxes name="n" defaultValue={raw} label="Your six numbers" />
+        <Button type="submit" className="w-full sm:w-auto">Check</Button>
       </form>
       {raw && !valid ? <p role="alert" className="mt-3 text-sm text-miss">Enter 6 different numbers between 1 and 49.</p> : null}
 

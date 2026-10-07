@@ -1,3 +1,4 @@
+import { NumberBoxes } from '@/components/number-boxes';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { DrawForm } from '@/components/admin/draw-form';
@@ -48,8 +49,10 @@ export default async function EditDrawPage({ params, searchParams }: { params: P
         <form className="mb-6 rounded-2xl border border-line p-4" aria-label="Preview payout">
           <p className="mb-2 text-sm text-mute">Preview the payout before you publish: type the six winning numbers and the extra, and see how many tickets win and how many points would be paid.</p>
           <div className="flex flex-wrap items-end gap-2">
-            <input name="pn" defaultValue={pn} placeholder="3 12 25 31 40 49" aria-label="Six winning numbers" className="h-10 w-56 rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
-            <input name="px" defaultValue={px} placeholder="Extra" aria-label="Extra number" className="h-10 w-24 rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
+            <div className="w-full sm:w-80">
+              <NumberBoxes name="pn" defaultValue={pn} label="Six winning numbers" />
+            </div>
+            <input name="px" defaultValue={px} inputMode="numeric" maxLength={2} placeholder="Extra" aria-label="Extra number" className="h-10 w-24 rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
             <Button type="submit" variant="outline">Preview</Button>
           </div>
           {pn && !preview ? <p className="mt-2 text-sm text-miss">Enter 6 different numbers and a different extra number, all from 1 to 49.</p> : null}

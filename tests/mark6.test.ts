@@ -139,3 +139,23 @@ test('winning units display like the HKJC: one decimal, a dash for none', async 
   assert.equal(unitsLabel(4085.2), '4,085.2');
   assert.equal(unitsLabel(0), '-');
 });
+
+test('pasted numbers are split for the six-circle input', async () => {
+  const { splitPasted, boxNumbers } = await import('../src/lib/mark6.ts');
+  assert.deepEqual(splitPasted('3 12 25 31 40 49'), ['3', '12', '25', '31', '40', '49']);
+  assert.deepEqual(splitPasted('3, 12; 25-31/40 49'), ['3', '12', '25', '31', '40', '49']);
+  assert.deepEqual(splitPasted('031225314049'), ['03', '12', '25', '31', '40', '49']);
+  assert.deepEqual(splitPasted('12345'), [], 'odd run of digits is ambiguous');
+  assert.deepEqual(splitPasted('no numbers here'), []);
+  assert.deepEqual(boxNumbers(['3', '12', '12', '0', '50', '', '49']), [3, 12, 49], 'duplicates, 0, 50 and blanks are ignored');
+});
+
+test('digits that arrive all at once are read left to right', async () => {
+  const { splitRun } = await import('../src/lib/mark6.ts');
+  assert.deepEqual(splitRun('1225314049'), ['12', '25', '31', '40', '49']);
+  assert.deepEqual(splitRun('5612'), ['5', '6', '12']);
+  assert.deepEqual(splitRun('0312'), ['03', '12']);
+  assert.deepEqual(splitRun('7'), ['7']);
+  assert.deepEqual(splitRun('123'), ['12', '3']);
+  assert.deepEqual(splitRun(''), []);
+});

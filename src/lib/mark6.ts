@@ -77,3 +77,40 @@ export function combinations(nums: number[], k = 6): number[][] {
   walk(0, []);
   return out;
 }
+
+/**
+ * Splits pasted text into number strings for the six-circle input: "3 12 25", "3,12,25" and "031225" all work.
+ * A single long run of digits is split into pairs; an odd-length run is ambiguous, so it gives nothing.
+ */
+export function splitPasted(text: string): string[] {
+  const tokens = text.match(/\d+/g) ?? [];
+  if (tokens.length === 1 && tokens[0].length > 2) {
+    const run = tokens[0];
+    return run.length % 2 === 0 ? (run.match(/\d\d/g) ?? []) : [];
+  }
+  return tokens.map((t) => t.slice(0, 2));
+}
+
+/**
+ * Splits a run of digits that arrived all at once (dictation, autofill) into numbers, reading left to right:
+ * 1 to 4 start a two-digit number, 5 to 9 stand alone. "1225314049" gives 12, 25, 31, 40, 49.
+ */
+export function splitRun(digits: string): string[] {
+  const out: string[] = [];
+  for (let k = 0; k < digits.length; ) {
+    const take = Number(digits[k]) >= 5 || k + 1 >= digits.length ? 1 : 2;
+    out.push(digits.slice(k, k + take));
+    k += take;
+  }
+  return out;
+}
+
+/** The valid, different numbers typed so far in the circles, in order. */
+export function boxNumbers(cells: string[]): number[] {
+  const out: number[] = [];
+  for (const c of cells) {
+    const n = parseInt(c, 10);
+    if (isBall(n) && !out.includes(n)) out.push(n);
+  }
+  return out;
+}
