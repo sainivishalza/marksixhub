@@ -92,6 +92,8 @@ test('public pages render with data, security headers and no inline styles/scrip
     assert.match(html, /<title>[^<]{5,}<\/title>/, url);
     assert.doesNotMatch(html, /\sstyle=|<style|<script(?![^>]*application\/ld\+json)/, `inline code on ${url}`);
     assert.match(res.headers.get('content-security-policy'), /default-src 'self'/);
+    assert.match(html, /<meta http-equiv="Content-Security-Policy" content="default-src (?:'|&#39;)self(?:'|&#39;); script-src /, `CSP meta on ${url}`);
+    assert.equal(res.headers.get('x-frame-options'), 'DENY');
     assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
     assert.equal(res.headers.get('x-powered-by'), null);
   }

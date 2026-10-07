@@ -6,6 +6,7 @@ const cookieSession = require('cookie-session');
 const cfg = require('./config');
 const { csrf } = require('./security');
 const context = require('./context');
+const csp = require('./csp');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -26,19 +27,8 @@ if (cfg.prod) {
 
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:'],
-        objectSrc: ["'none'"],
-        baseUri: ["'self'"],
-        formAction: ["'self'"],
-        frameAncestors: ["'none'"],
-        upgradeInsecureRequests: cfg.prod ? [] : null,
-      },
-    },
+    contentSecurityPolicy: { directives: csp.directives },
+    frameguard: { action: 'deny' },
     strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true, preload: true },
   }),
 );

@@ -1,4 +1,5 @@
 const cfg = require('./config');
+const csp = require('./csp');
 const { q, one, cached } = require('./db');
 const { money, date } = require('./format');
 const { ballClass } = require('./mark6');
@@ -33,6 +34,7 @@ module.exports = async function context(req, res, next) {
     path: req.path,
     url: req.originalUrl,
     baseUrl: cfg.baseUrl,
+    cspMeta: csp.meta,
     canonical: cfg.baseUrl + req.path,
     title: site.site_name,
     description: site.site_description,
