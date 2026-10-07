@@ -1,0 +1,1 @@
+Audit this site against CLAUDE.md. Run `node tests/smoke.mjs`, then check: security headers in _headers, SEO tags on every page, sitemap lists all pages, no inline scripts/styles, no unused code, image sizes. Report only real problems with file:line, then fix them minimally.
