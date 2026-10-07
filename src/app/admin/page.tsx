@@ -26,7 +26,7 @@ export default async function DashboardPage() {
         </section>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Registered users" value={d.users} />
         <StatCard label="Published draws" value={d.published} hint={`${d.upcoming} upcoming`} />
         <StatCard label="Saved sets today" value={d.picksToday} />
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
         <StatCard label="Orders today" value={d.ordersToday} hint={`${d.ticketsToday} tickets`} />
         <StatCard label="Points held by users" value={d.pointsHeld} />
         <StatCard label="Points paid as winnings" value={d.pointsWon} hint="All time" />
-        <StatCard label="Page views" value="Not tracked" hint="Add Plausible or Umami for visitor stats" />
+        <StatCard label="Page views" value="Not tracked" hint="Add Plausible or Umami for visitor stats" className="col-span-2 lg:col-span-1" />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">

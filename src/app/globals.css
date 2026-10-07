@@ -73,3 +73,46 @@
   .prose-site p { @apply max-w-[68ch] text-mute leading-relaxed; }
   .prose-site p + p { @apply mt-4; }
 }
+
+/* Tables become cards on phones (see AdminTable in components/admin/ui.tsx). */
+@media (max-width: 767px) {
+  .rt thead { display: none; }
+  .rt, .rt tbody { display: block; }
+  .rt tbody > tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.7rem 1rem;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    border: 1px solid rgba(212, 175, 55, 0.22);
+    border-radius: 1rem;
+    background: rgba(17, 24, 39, 0.7);
+  }
+  .rt tbody > tr > th,
+  .rt tbody > tr > td {
+    display: block;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .rt tbody > tr > th[scope='row'] { grid-column: 1 / -1; font-size: 1.05rem; }
+  .rt tbody > tr > td[data-wide] { grid-column: 1 / -1; }
+  .rt tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.1rem;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: #a9b0c0;
+  }
+  /* Buttons inside a card are easy to tap. */
+  .rt tbody > tr > td button,
+  .rt tbody > tr > td select { min-height: 2.75rem; height: auto !important; padding-inline: 1rem; }
+  /* Empty cells would leave a blank gap in the card. */
+  .rt tbody > tr > td:empty { display: none; }
+}

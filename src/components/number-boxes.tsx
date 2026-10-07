@@ -10,6 +10,13 @@ type Props = {
   /** Names a hidden field holding the numbers separated by spaces, so a plain form can submit them. */
   name?: string;
   defaultValue?: string;
+  /** Exact starting text for each circle (wins over defaultValue); used to show what was typed after a failed save. */
+  defaultCells?: string[];
+  /** Gives each circle its own form field name (n1, n2, ...) instead of one joined hidden field. */
+  fieldNames?: string[];
+  /** "gold" is the extra number. */
+  variant?: 'default' | 'gold';
+  className?: string;
   count?: number;
   /** Called on every change with what is typed in each circle. */
   onChange?: (cells: string[]) => void;
@@ -20,8 +27,9 @@ type Props = {
  * a number that cannot take a second digit (5 to 9) moves on by itself, 1 to 4 move on after a short pause,
  * the keypad's "Next" key moves on, and pasting "3 12 25 31 40 49" fills every circle.
  */
-export function NumberBoxes({ label, name, defaultValue = '', count = 6, onChange }: Props) {
+export function NumberBoxes({ label, name, defaultValue = '', defaultCells, fieldNames, variant = 'default', className, count = 6, onChange }: Props) {
   const [cells, setCells] = useState<string[]>(() => {
+    if (defaultCells) return Array.from({ length: count }, (_, i) => defaultCells[i] ?? '');
     const start = parseNumbers(defaultValue).slice(0, count).map(String);
     return [...start, ...Array<string>(count - start.length).fill('')];
   });
@@ -113,13 +121,14 @@ export function NumberBoxes({ label, name, defaultValue = '', count = 6, onChang
   });
 
   return (
-    <div role="group" aria-label={label} onPaste={paste} className="grid max-w-sm grid-cols-6 gap-1.5 sm:gap-2">
+    <div role="group" aria-label={label} onPaste={paste} style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }} className={cn('grid gap-1.5 sm:gap-2', className ?? 'max-w-sm')}>
       {cells.map((c, i) => (
         <input
           key={i}
           ref={(el) => {
             refs.current[i] = el;
           }}
+          name={fieldNames?.[i]}
           value={c}
           onChange={(e) => typed(i, e.target.value)}
           onKeyDown={(e) => keys(i, e)}
@@ -133,13 +142,17 @@ export function NumberBoxes({ label, name, defaultValue = '', count = 6, onChang
           aria-invalid={state[i] === 'bad'}
           className={cn(
             'aspect-square w-full min-w-0 text-center text-base',
-            state[i] === 'ok' ? ringClass(parseInt(c, 10)) : 'rounded-full border-2 bg-night font-mono font-bold tabular-nums text-ivory',
-            state[i] === 'empty' && 'border-line',
+            variant === 'gold' && state[i] !== 'bad'
+              ? 'rounded-full border-2 border-gold-bright bg-night font-mono font-bold tabular-nums text-gold-bright'
+              : state[i] === 'ok'
+                ? ringClass(parseInt(c, 10))
+                : 'rounded-full border-2 bg-night font-mono font-bold tabular-nums text-ivory',
+            state[i] === 'empty' && variant !== 'gold' && 'border-line',
             state[i] === 'bad' && 'border-miss',
           )}
         />
       ))}
-      {name ? <input type="hidden" name={name} value={valid.join(' ')} /> : null}
+      {name && !fieldNames ? <input type="hidden" name={name} value={valid.join(' ')} /> : null}
     </div>
   );
 }

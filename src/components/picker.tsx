@@ -318,7 +318,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
             role="tab"
             aria-selected={mode === m.id}
             onClick={() => changeMode(m.id)}
-            className={cn('flex-1 rounded-lg px-2 py-2 text-sm transition', mode === m.id ? 'bg-gold text-night' : 'text-mute hover:text-ivory')}
+            className={cn('flex-1 whitespace-nowrap rounded-lg px-1.5 py-2.5 text-[0.8rem] transition sm:px-2 sm:text-sm', mode === m.id ? 'bg-gold text-night' : 'text-mute hover:text-ivory')}
           >
             {m.label}
           </button>
@@ -341,7 +341,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
               max={MAX_ORDER}
               value={qty}
               onChange={(e) => setQty(Math.min(MAX_ORDER, Math.max(1, Math.floor(Number(e.target.value)) || 1)))}
-              className="h-10 w-24 rounded-lg border border-line bg-night px-3 font-mono text-ivory"
+              className="h-11 w-24 rounded-lg border border-line bg-night px-3 font-mono text-base text-ivory sm:h-10"
             />
             <Button onClick={addQuick}>
               <Sparkles aria-hidden className="h-4 w-4" />
@@ -416,50 +416,51 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       </>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      {/* Phones: the two main actions are full width, the small ones share one even row of icon buttons. */}
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {mode === 'single' ? (
-        <Button onClick={runQuickPick}>
-          <Sparkles aria-hidden className="h-4 w-4" />
-          {complete ? 'Pick again' : sel.length ? 'Fill the rest' : 'Quick pick'}
-        </Button>
+          <Button onClick={runQuickPick} className="max-sm:w-full">
+            <Sparkles aria-hidden className="h-4 w-4" />
+            {complete ? 'Pick again' : sel.length ? 'Fill the rest' : 'Quick pick'}
+          </Button>
         ) : null}
         {mode === 'multiple' ? (
-          <Button onClick={() => addSet(sortAsc(quickPick(sel)))}>
+          <Button onClick={() => addSet(sortAsc(quickPick(sel)))} className="max-sm:w-full">
             <Sparkles aria-hidden className="h-4 w-4" />
             {sel.length ? 'Fill the rest and add' : 'Quick pick a ticket'}
           </Button>
         ) : null}
+        {mode === 'single' ? (
+          <Button variant="outline" onClick={addToSlip} disabled={!complete} className="max-sm:w-full sm:order-last">
+            <Plus aria-hidden className="h-4 w-4" />
+            Add to slip
+          </Button>
+        ) : null}
         {mode !== 'quick' ? (
-          <>
+          <div className="grid auto-cols-fr grid-flow-col gap-2 sm:contents">
             <Button variant="outline" onClick={clear} disabled={!sel.length}>
               <Eraser aria-hidden className="h-4 w-4" />
-              Clear
+              <span className="max-sm:sr-only">Clear</span>
             </Button>
             {mode === 'single' ? (
               <>
                 <Button variant="outline" onClick={copy} disabled={!complete}>
                   <Copy aria-hidden className="h-4 w-4" />
-                  Copy
+                  <span className="max-sm:sr-only">Copy</span>
                 </Button>
                 <Button variant="outline" onClick={share} disabled={!complete}>
                   <Share2 aria-hidden className="h-4 w-4" />
-                  Share
+                  <span className="max-sm:sr-only">Share</span>
                 </Button>
               </>
             ) : null}
             {mode === 'single' && wallet ? (
               <Button variant="outline" onClick={addFavourite} disabled={!complete || placing}>
                 <Heart aria-hidden className="h-4 w-4" />
-                Favourite
+                <span className="max-sm:sr-only">Favourite</span>
               </Button>
             ) : null}
-            {mode === 'single' ? (
-              <Button variant="outline" onClick={addToSlip} disabled={!complete}>
-                <Plus aria-hidden className="h-4 w-4" />
-                Add to slip
-              </Button>
-            ) : null}
-          </>
+          </div>
         ) : null}
       </div>
 
@@ -516,7 +517,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
               Confirm your email to submit orders. We sent you a link; <Link href="/account" className="underline underline-offset-4">ask for another in My account</Link>.
             </p>
           ) : null}
-          <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo || !wallet.verified}>
+          <Button className="mt-2 max-sm:w-full" onClick={place} disabled={!orders.length || placing || !wallet.drawNo || !wallet.verified}>
             <Ticket aria-hidden className="h-4 w-4" />
             {placing ? 'Submitting...' : orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${cost(orders)} points)` : 'Submit order'}
           </Button>
@@ -526,7 +527,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
         <div className="mt-4 rounded-xl border border-gold/30 p-3">
           <p className="text-sm text-mute">Log in or create a free account to submit your numbers. Your tickets are kept while you do.</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <Button onClick={submitAsGuest} disabled={!orders.length}>
+            <Button className="max-sm:w-full" onClick={submitAsGuest} disabled={!orders.length}>
               <Ticket aria-hidden className="h-4 w-4" />
               {orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'}` : 'Submit order'}
             </Button>

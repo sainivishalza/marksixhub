@@ -15,7 +15,7 @@ export function CurrencySwitch({ currencies, current }: { currencies: Currency[]
           document.cookie = `cur=${e.target.value}; path=/; max-age=31536000; samesite=lax`;
           router.refresh();
         }}
-        className="h-9 rounded-lg border border-line bg-night px-2 font-mono text-ivory"
+        className="h-10 rounded-lg border border-line bg-night px-2 font-mono text-base text-ivory sm:h-9 sm:text-sm"
       >
         {currencies.map((c) => (
           <option key={c.code} value={c.code}>

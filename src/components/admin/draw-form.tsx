@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 import { saveDrawAction, type DrawFormState } from '@/actions/admin';
 import { Field, inputClass, Panel } from '@/components/admin/ui';
+import { NumberBoxes } from '@/components/number-boxes';
 import { FormMessage, SubmitButton } from '@/components/submit-button';
 import { buttonVariants } from '@/components/ui/button';
 import { DIVISION_LABEL, DIVISION_RULE } from '@/lib/mark6';
@@ -64,47 +65,49 @@ export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: 
 
         <Panel title="Result (add after the draw)">
           <p className="mb-3 text-sm text-mute">Leave these empty while the draw is upcoming. After the draw: enter the six winning numbers and the extra number, then set &quot;Show on the site as&quot; to Result published.</p>
-          <div className="flex flex-wrap items-end gap-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <label key={i} className="text-xs text-mute">
-                <span className="mb-1 block">No. {i}</span>
-                <input type="number" name={`n${i}`} min={1} max={49} defaultValue={val(`n${i}`, draw?.numbers[i - 1])} className={`${inputClass} w-20 font-mono`} />
-              </label>
-            ))}
-            <label className="text-xs text-gold-bright">
-              <span className="mb-1 block">Extra</span>
-              <input type="number" name="extra" min={1} max={49} defaultValue={val('extra', draw?.extra)} className={`${inputClass} w-20 border-gold/60 font-mono`} />
-            </label>
-          </div>
+          <p className="mb-2 text-sm text-ivory">Six winning numbers</p>
+          <NumberBoxes
+            label="Six winning numbers"
+            fieldNames={['n1', 'n2', 'n3', 'n4', 'n5', 'n6']}
+            defaultCells={[1, 2, 3, 4, 5, 6].map((i) => val(`n${i}`, draw?.numbers[i - 1]))}
+            className="max-w-md"
+          />
+          <p className="mb-2 mt-5 text-sm text-gold-bright">Extra number</p>
+          <NumberBoxes label="Extra number" count={1} variant="gold" fieldNames={['extra']} defaultCells={[val('extra', draw?.extra)]} className="w-[3.25rem] sm:w-14" />
         </Panel>
 
         <Panel title="Prizes by division (add after the draw)">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] text-left text-sm">
-              <thead className="text-mute">
-                <tr><th scope="col" className="py-2 pr-3 font-medium">Prize</th><th scope="col" className="py-2 pr-3 font-medium">Match</th><th scope="col" className="py-2 pr-3 font-medium">Winning units</th><th scope="col" className="py-2 font-medium">Prize per unit (HK$)</th></tr>
-              </thead>
-              <tbody>
-                {DIVISION_LABEL.map((label, i) => {
-                  const n = i + 1;
-                  return (
-                    <tr key={label} className="border-t border-line/40">
-                      <th scope="row" className="py-2 pr-3 font-serif text-base font-medium text-gold-bright">{label}</th>
-                      <td className="py-2 pr-3 text-mute">{DIVISION_RULE[i]}</td>
-                      <td className="py-2 pr-3"><input name={`w${n}`} inputMode="decimal" aria-label={`Winning units, ${label} prize`} defaultValue={val(`w${n}`, prize(n)?.winners ?? 0)} className={`${money} w-28`} /></td>
-                      <td className="py-2"><input name={`p${n}`} inputMode="numeric" aria-label={`Prize per unit, ${label} prize`} defaultValue={val(`p${n}`, prize(n)?.prizeHkd ?? 0)} className={`${money} w-40`} /></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="hidden grid-cols-[4.5rem_1fr_9rem_11rem] gap-3 border-b border-line/50 pb-2 text-sm text-mute sm:grid" aria-hidden>
+            <span>Prize</span>
+            <span>Match</span>
+            <span>Winning units</span>
+            <span>Prize per unit (HK$)</span>
+          </div>
+          <div className="divide-y divide-line/40">
+            {DIVISION_LABEL.map((label, i) => {
+              const n = i + 1;
+              return (
+                <div key={label} className="grid grid-cols-2 gap-x-3 gap-y-2 py-3 sm:grid-cols-[4.5rem_1fr_9rem_11rem] sm:items-center">
+                  <p className="col-span-2 font-serif text-lg font-medium text-gold-bright sm:col-span-1">{label}</p>
+                  <p className="col-span-2 text-sm text-mute sm:col-span-1">{DIVISION_RULE[i]}</p>
+                  <label className="block text-xs text-mute">
+                    <span className="mb-1 block sm:sr-only">Winning units</span>
+                    <input name={`w${n}`} inputMode="decimal" aria-label={`Winning units, ${label} prize`} defaultValue={val(`w${n}`, prize(n)?.winners ?? 0)} className={money} />
+                  </label>
+                  <label className="block text-xs text-mute">
+                    <span className="mb-1 block sm:sr-only">Prize per unit (HK$)</span>
+                    <input name={`p${n}`} inputMode="numeric" aria-label={`Prize per unit, ${label} prize`} defaultValue={val(`p${n}`, prize(n)?.prizeHkd ?? 0)} className={money} />
+                  </label>
+                </div>
+              );
+            })}
           </div>
           <p className="mt-3 text-xs text-mute">Prizes are saved only for a published result. Winning units can have one decimal, like 2.5. Use 0 for a division with no winner.</p>
         </Panel>
 
-        <div className="flex gap-3">
-          <SubmitButton size="lg" pendingText="Saving...">{draw ? 'Save changes' : 'Save draw'}</SubmitButton>
-          <Link href="/admin/draws" className={buttonVariants({ variant: 'ghost', size: 'lg' })}>Cancel</Link>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <SubmitButton size="lg" pendingText="Saving..." className="max-sm:w-full">{draw ? 'Save changes' : 'Save draw'}</SubmitButton>
+          <Link href="/admin/draws" className={buttonVariants({ variant: 'ghost', size: 'lg', className: 'max-sm:w-full' })}>Cancel</Link>
         </div>
       </div>
     </form>
