@@ -1,0 +1,8 @@
+<%- include('../partials/head') %>
+<%- include('_nav') %>
+<h1>Users</h1>
+<table>
+  <thead><tr><th>ID</th><th>Email</th><th>Role</th><th>Currency</th><th>Joined</th></tr></thead>
+  <tbody><% rows.forEach(u => { %><tr><td><%= u.id %></td><td><%= u.email %></td><td><%= u.role %></td><td><%= u.currency %></td><td><%= u.created_at %></td></tr><% }) %></tbody>
+</table>
+<%- include('../partials/foot') %>

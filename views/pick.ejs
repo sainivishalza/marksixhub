@@ -1,0 +1,29 @@
+<%- include('partials/head') %>
+<h1>Mark Six Number Generator</h1>
+<p class="lead">Not sure which six numbers to choose? Let us pick for you. This is just for fun: every combination has the same chance of being drawn.</p>
+<form method="get" action="/pick" class="card form">
+  <label>Style
+    <select name="mode">
+      <% MODES.forEach(m => { %><option value="<%= m %>"<%= m === mode ? ' selected' : '' %>><%= { random: 'Random', balanced: 'Balanced (mix of odd/even, normal total)', hot: 'Hot numbers (drawn most often)', cold: 'Cold numbers (drawn least often)' }[m] %></option><% }) %>
+    </select>
+  </label>
+  <label>How many sets
+    <input type="number" name="count" min="1" max="10" value="<%= count %>">
+  </label>
+  <label>Your lucky numbers (optional, up to 5)
+    <input type="text" name="fav" value="<%= fav.join(', ') %>" placeholder="e.g. 7, 18, 29" maxlength="30">
+  </label>
+  <button class="btn" type="submit" name="go" value="1">Generate numbers</button>
+</form>
+<% if (sets.length) { %>
+<h2>Your numbers</h2>
+<% sets.forEach(s => { %>
+  <div class="row"><%- include('partials/balls', { numbers: s }) %>
+  <% if (user) { %>
+    <form action="/account/sets" method="post" class="inline"><%- csrfField() %><input type="hidden" name="nums" value="<%= s.join(',') %>"><button class="small" type="submit">Save</button></form>
+  <% } %></div>
+<% }) %>
+<% if (!user) { %><p><a href="/register">Create a free account</a> to save your favourite sets.</p><% } %>
+<p class="muted">To play, use the official Hong Kong Jockey Club channels where it is legal for you.</p>
+<% } %>
+<%- include('partials/foot') %>

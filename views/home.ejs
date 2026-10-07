@@ -1,0 +1,50 @@
+<%- include('partials/head') %>
+<h1>Mark Six Results &amp; Prizes</h1>
+<p class="lead">Latest Hong Kong Mark Six winning numbers, jackpots and a free number picker. Prizes shown in <strong><%= cur.code %></strong>.</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>Latest result</h2>
+    <% if (latest) { %>
+      <p><a href="/results/<%= latest.slug %>">Draw <%= latest.draw_no %></a> · <%= fmtDate(latest.draw_date) %></p>
+      <%- include('partials/balls', { numbers: latest.numbers, extra: latest.extra }) %>
+      <% const first = prizes.find(p => p.division === 1); if (first) { %>
+        <p>1st division: <strong><%= fmt(first.prize_hkd) %></strong> (<%= first.winners %> winner<%= first.winners === 1 ? '' : 's' %>)</p>
+      <% } %>
+      <p><a href="/results/<%= latest.slug %>">Full prize breakdown</a></p>
+    <% } else { %><p>No results published yet.</p><% } %>
+  </section>
+  <section class="card">
+    <h2>Next draw</h2>
+    <% if (next) { %>
+      <p>Draw <%= next.draw_no %> · <%= fmtDate(next.draw_date) %></p>
+      <% if (next.est_jackpot_hkd > 0) { %><p class="big"><%= fmt(next.est_jackpot_hkd) %></p><p>Estimated 1st division prize</p><% } %>
+      <% if (next.note) { %><p><%= next.note %></p><% } %>
+    <% } else { %><p>The next draw date will be announced soon.</p><% } %>
+    <p><a class="btn" href="/pick">Pick my numbers</a></p>
+  </section>
+</div>
+
+<% if (recent.length) { %>
+<section>
+  <h2>Previous results</h2>
+  <% recent.forEach(d => { %>
+    <div class="row"><a href="/results/<%= d.slug %>"><%= d.draw_no %></a> <span class="muted"><%= fmtDate(d.draw_date) %></span>
+    <%- include('partials/balls', { numbers: d.numbers, extra: d.extra }) %></div>
+  <% }) %>
+  <p><a href="/results">All results</a></p>
+</section>
+<% } %>
+
+<% if (events.length) { %>
+<section>
+  <h2>Upcoming events</h2>
+  <ul><% events.forEach(e => { %><li><strong><%= e.title %></strong> · <%= fmtDate(e.event_date) %><% if (e.body) { %><br><%= e.body %><% } %></li><% }) %></ul>
+</section>
+<% } %>
+
+<section>
+  <h2>New to Mark Six?</h2>
+  <p>Mark Six is the Hong Kong Jockey Club lottery: six numbers are drawn from 1 to 49, plus one extra number. Read the <a href="/how-to-play">simple guide</a>, then try the <a href="/pick">free number generator</a> if you want help choosing.</p>
+</section>
+<%- include('partials/foot') %>

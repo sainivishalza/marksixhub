@@ -1,0 +1,27 @@
+<%- include('../partials/head') %>
+<%- include('_nav') %>
+<h1>Currencies</h1>
+<p>Rate = how many units of the currency equal <strong>1 HKD</strong>. Update rates whenever you like; users see converted prizes straight away. Untick "Active" to hide a currency from the selector.</p>
+<% rows.forEach(c => { %>
+<form action="/admin/currencies/save" method="post" class="rowform">
+  <%- csrfField() %>
+  <strong><%= c.code %></strong><input type="hidden" name="code" value="<%= c.code %>">
+  <input name="name" value="<%= c.name %>" maxlength="40" required aria-label="Name">
+  <input name="symbol" value="<%= c.symbol %>" maxlength="6" class="num" aria-label="Symbol">
+  <input name="rate" value="<%= c.rate %>" type="number" step="any" min="0" required aria-label="Rate per 1 HKD"<%= c.code === 'HKD' ? ' readonly' : '' %>>
+  <label><input type="checkbox" name="active" value="1"<%= c.active ? ' checked' : '' %><%= c.code === 'HKD' ? ' disabled' : '' %>> Active</label>
+  <button class="small" type="submit">Save</button>
+  <% if (c.code !== 'HKD') { %><button class="small danger" type="submit" formaction="/admin/currencies/<%= c.code %>/delete" formnovalidate>Delete</button><% } %>
+</form>
+<% }) %>
+<h2>Add a currency</h2>
+<form action="/admin/currencies/save" method="post" class="card form">
+  <%- csrfField() %>
+  <label>Code (3 letters) <input name="code" required pattern="[A-Za-z]{3}" maxlength="3"></label>
+  <label>Name <input name="name" required maxlength="40"></label>
+  <label>Symbol <input name="symbol" maxlength="6"></label>
+  <label>Rate per 1 HKD <input name="rate" type="number" step="any" min="0" required></label>
+  <label><input type="checkbox" name="active" value="1" checked> Active</label>
+  <button class="btn" type="submit">Add currency</button>
+</form>
+<%- include('../partials/foot') %>

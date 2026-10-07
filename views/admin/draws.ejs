@@ -1,0 +1,16 @@
+<%- include('../partials/head') %>
+<%- include('_nav') %>
+<h1>Draws &amp; results</h1>
+<p><a class="btn" href="/admin/draws/new">Add draw</a></p>
+<table>
+  <thead><tr><th>Draw</th><th>Date</th><th>Status</th><th>Numbers</th><th></th></tr></thead>
+  <tbody>
+  <% rows.forEach(d => { %>
+    <tr><td><%= d.draw_no %></td><td><%= d.draw_date %></td><td><%= d.status %></td>
+    <td><% if (d.status === 'published') { %><%- include('../partials/balls', { numbers: d.numbers, extra: d.extra }) %><% } %></td>
+    <td><a href="/admin/draws/<%= d.id %>/edit">Edit</a>
+      <form action="/admin/draws/<%= d.id %>/delete" method="post" class="inline"><%- csrfField() %><button class="small danger" type="submit">Delete</button></form></td></tr>
+  <% }) %>
+  </tbody>
+</table>
+<%- include('../partials/foot') %>

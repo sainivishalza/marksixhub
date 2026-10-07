@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<h1>Upcoming Mark Six Draws &amp; Events</h1>
+<h2>Draw calendar</h2>
+<% if (!draws.length) { %><p>No upcoming draws have been added yet.</p><% } %>
+<% draws.forEach(d => { %>
+  <div class="card"><strong>Draw <%= d.draw_no %></strong> · <%= fmtDate(d.draw_date) %>
+  <% if (d.est_jackpot_hkd > 0) { %><p>Estimated 1st division prize: <strong><%= fmt(d.est_jackpot_hkd) %></strong></p><% } %>
+  <% if (d.note) { %><p><%= d.note %></p><% } %></div>
+<% }) %>
+<h2>Events</h2>
+<% if (!events.length) { %><p>No events right now.</p><% } %>
+<ul><% events.forEach(e => { %><li><strong><%= e.title %></strong> · <%= fmtDate(e.event_date) %><% if (e.body) { %><br><%= e.body %><% } %></li><% }) %></ul>
+<%- include('partials/foot') %>

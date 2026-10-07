@@ -1,0 +1,1 @@
+<span class="balls"><% numbers.forEach(n => { %><span class="ball <%= ballClass(n) %>"><%= n %></span><% }) %><% if (typeof extra !== 'undefined' && extra) { %><span class="plus" aria-hidden="true">+</span><span class="ball x <%= ballClass(extra) %>" title="Extra number"><%= extra %></span><span class="sr"> extra number</span><% } %></span>

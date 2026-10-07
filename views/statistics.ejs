@@ -1,0 +1,15 @@
+<%- include('partials/head') %>
+<h1>Mark Six Number Statistics</h1>
+<p class="lead">Based on <%= draws %> published draw<%= draws === 1 ? '' : 's' %>. Past results do not predict future draws.</p>
+<div class="grid">
+  <section class="card"><h2>Hot numbers</h2>
+    <% hot.forEach(h => { %><span class="ball <%= ballClass(h.n) %>" title="<%= h.count %> times"><%= h.n %></span><% }) %></section>
+  <section class="card"><h2>Cold numbers</h2>
+    <% cold.forEach(h => { %><span class="ball <%= ballClass(h.n) %>" title="<%= h.count %> times"><%= h.n %></span><% }) %></section>
+</div>
+<h2>All numbers</h2>
+<table>
+  <thead><tr><th>Number</th><th>Times drawn</th></tr></thead>
+  <tbody><% ranked.forEach(r => { %><tr><td><span class="ball <%= ballClass(r.n) %>"><%= r.n %></span></td><td><%= r.count %></td></tr><% }) %></tbody>
+</table>
+<%- include('partials/foot') %>

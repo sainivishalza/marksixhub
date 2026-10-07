@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<h1>Mark Six Result: Draw <%= draw.draw_no %></h1>
+<p class="muted"><%= fmtDate(draw.draw_date) %></p>
+<%- include('partials/balls', { numbers: draw.numbers, extra: draw.extra }) %>
+<% if (draw.note) { %><p><%= draw.note %></p><% } %>
+<h2>Prize breakdown (<%= cur.code %>)</h2>
+<table>
+  <thead><tr><th>Division</th><th>Winners</th><th>Prize per winning unit</th></tr></thead>
+  <tbody>
+  <% prizes.forEach(p => { %>
+    <tr><td><%= ['1st','2nd','3rd','4th','5th','6th','7th'][p.division - 1] %></td><td><%= p.winners %></td><td><%= fmt(p.prize_hkd) %></td></tr>
+  <% }) %>
+  </tbody>
+</table>
+<p class="muted">Official amounts are in HK$. <a href="/how-to-play">How the divisions work</a>.</p>
+<p><a href="/results">&larr; All results</a></p>
+<%- include('partials/foot') %>

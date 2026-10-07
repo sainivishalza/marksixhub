@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title><%= title %></title>
+<meta name="description" content="<%= description %>">
+<% if (noindex) { %><meta name="robots" content="noindex,nofollow"><% } else { %><link rel="canonical" href="<%= canonical %>"><% } %>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b6b3a">
+<meta property="og:title" content="<%= title %>">
+<meta property="og:description" content="<%= description %>">
+<meta property="og:type" content="website">
+<meta property="og:url" content="<%= canonical %>">
+<meta property="og:site_name" content="<%= site.site_name %>">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/styles.css">
+<% if (jsonld) { %><script type="application/ld+json"><%- JSON.stringify(jsonld).replace(/</g, '\\u003c') %></script><% } %>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><%= site.site_name %></a>
+  <nav aria-label="Main">
+    <a href="/results">Results</a>
+    <a href="/upcoming">Upcoming</a>
+    <a href="/pick">Number picker</a>
+    <a href="/statistics">Statistics</a>
+    <a href="/how-to-play">How to play</a>
+  </nav>
+  <div class="tools">
+    <form action="/currency" method="get" class="inline">
+      <input type="hidden" name="next" value="<%= url %>">
+      <label class="sr" for="cur">Currency</label>
+      <select id="cur" name="c"><% currencies.forEach(c => { %><option value="<%= c.code %>"<%= c.code === cur.code ? ' selected' : '' %>><%= c.code %></option><% }) %></select>
+      <button type="submit" class="small">Set</button>
+    </form>
+    <% if (user) { %>
+      <a href="/account">Account</a>
+      <% if (user.role === 'admin') { %><a href="/admin">Admin</a><% } %>
+      <form action="/logout" method="post" class="inline"><%- csrfField() %><button class="small" type="submit">Log out</button></form>
+    <% } else { %>
+      <a href="/login">Log in</a> <a class="btn small" href="/register">Sign up</a>
+    <% } %>
+  </div>
+</header>
+<% if (site.announcement) { %><p class="notice"><%= site.announcement %></p><% } %>
+<% if (typeof flash !== 'undefined') { %><p class="notice ok" role="status"><%= flash %></p><% } %>
+<main id="main">

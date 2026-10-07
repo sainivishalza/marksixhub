@@ -1,0 +1,15 @@
+<%- include('partials/head') %>
+<h1>Mark Six Results</h1>
+<% if (!rows.length) { %><p>No results published yet.</p><% } %>
+<% rows.forEach(d => { %>
+  <div class="row"><a href="/results/<%= d.slug %>"><%= d.draw_no %></a> <span class="muted"><%= fmtDate(d.draw_date) %></span>
+  <%- include('partials/balls', { numbers: d.numbers, extra: d.extra }) %></div>
+<% }) %>
+<% if (pages > 1) { %>
+<nav class="pager" aria-label="Pages">
+  <% if (page > 1) { %><a href="/results?page=<%= page - 1 %>" rel="prev">&larr; Newer</a><% } %>
+  <span>Page <%= page %> of <%= pages %></span>
+  <% if (page < pages) { %><a href="/results?page=<%= page + 1 %>" rel="next">Older &rarr;</a><% } %>
+</nav>
+<% } %>
+<%- include('partials/foot') %>

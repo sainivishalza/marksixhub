@@ -1,0 +1,26 @@
+<%- include('../partials/head') %>
+<%- include('_nav') %>
+<h1>Events</h1>
+<h2>Add an event</h2>
+<form action="/admin/events/save" method="post" class="card form">
+  <%- csrfField() %>
+  <label>Title <input name="title" required maxlength="120"></label>
+  <label>Date <input type="date" name="event_date" required></label>
+  <label>Details <input name="body" maxlength="500"></label>
+  <label><input type="checkbox" name="active" value="1" checked> Show on site</label>
+  <button class="btn" type="submit">Add event</button>
+</form>
+<h2>All events</h2>
+<% rows.forEach(e => { %>
+<form action="/admin/events/save" method="post" class="rowform">
+  <%- csrfField() %>
+  <input type="hidden" name="id" value="<%= e.id %>">
+  <input name="title" value="<%= e.title %>" required maxlength="120" aria-label="Title">
+  <input type="date" name="event_date" value="<%= e.event_date %>" required aria-label="Date">
+  <input name="body" value="<%= e.body %>" maxlength="500" aria-label="Details">
+  <label><input type="checkbox" name="active" value="1"<%= e.active ? ' checked' : '' %>> Show</label>
+  <button class="small" type="submit">Save</button>
+  <button class="small danger" type="submit" formaction="/admin/events/<%= e.id %>/delete" formnovalidate>Delete</button>
+</form>
+<% }) %>
+<%- include('../partials/foot') %>

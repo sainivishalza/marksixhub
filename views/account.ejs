@@ -1,0 +1,10 @@
+<%- include('partials/head') %>
+<h1>My account</h1>
+<p><%= user.email %> · Currency: <strong><%= cur.code %></strong> (change it with the selector at the top)</p>
+<h2>Saved numbers</h2>
+<% if (!sets.length) { %><p>Nothing saved yet. Use the <a href="/pick">number generator</a> and press Save.</p><% } %>
+<% sets.forEach(s => { %>
+  <div class="row"><%- include('partials/balls', { numbers: s.numbers }) %>
+  <form action="/account/sets/<%= s.id %>/delete" method="post" class="inline"><%- csrfField() %><button class="small" type="submit">Delete</button></form></div>
+<% }) %>
+<%- include('partials/foot') %>

@@ -1,0 +1,36 @@
+<%- include('../partials/head') %>
+<%- include('_nav') %>
+<h1><%= d.id ? 'Edit draw ' + d.draw_no : 'Add draw' %></h1>
+<% errors.forEach(e => { %><p class="notice err" role="alert"><%= e %></p><% }) %>
+<form method="post" action="/admin/draws/save" class="card form">
+  <%- csrfField() %>
+  <input type="hidden" name="id" value="<%= d.id || '' %>">
+  <label>Draw number (e.g. 26/081) <input name="draw_no" value="<%= d.draw_no %>" required pattern="\d{2}/\d{3}" maxlength="6"></label>
+  <label>Draw date <input type="date" name="draw_date" value="<%= d.draw_date %>" required></label>
+  <label>Status
+    <select name="status">
+      <option value="upcoming"<%= d.status === 'upcoming' ? ' selected' : '' %>>Upcoming (not drawn yet)</option>
+      <option value="published"<%= d.status === 'published' ? ' selected' : '' %>>Published (result known)</option>
+    </select>
+  </label>
+  <label>Estimated 1st division prize (HK$, for upcoming draws) <input type="number" name="est_jackpot_hkd" min="0" value="<%= d.est_jackpot_hkd %>"></label>
+  <fieldset><legend>Winning numbers (needed when published)</legend>
+    <% for (let i = 1; i <= 6; i++) { %><input class="num" type="number" name="n<%= i %>" min="1" max="49" aria-label="Number <%= i %>" value="<%= (d.numbers && d.numbers[i - 1]) || '' %>"><% } %>
+    <label>Extra number <input class="num" type="number" name="extra" min="1" max="49" value="<%= d.extra || '' %>"></label>
+  </fieldset>
+  <fieldset><legend>Prizes per division (HK$)</legend>
+    <table>
+      <thead><tr><th>Division</th><th>Winners</th><th>Prize per unit (HK$)</th></tr></thead>
+      <tbody>
+      <% for (let div = 1; div <= 7; div++) { const p = prizes[div] || { winners: 0, prize_hkd: 0 }; %>
+        <tr><td><%= div %></td>
+        <td><input type="number" name="w<%= div %>" min="0" value="<%= p.winners %>" aria-label="Winners division <%= div %>"></td>
+        <td><input type="number" name="p<%= div %>" min="0" value="<%= p.prize_hkd %>" aria-label="Prize division <%= div %>"></td></tr>
+      <% } %>
+      </tbody>
+    </table>
+  </fieldset>
+  <label>Note (optional, shown publicly) <input name="note" maxlength="255" value="<%= d.note || '' %>"></label>
+  <button class="btn" type="submit">Save</button>
+</form>
+<%- include('../partials/foot') %>

@@ -1,0 +1,10 @@
+<%- include('../partials/head') %>
+<%- include('_nav') %>
+<h1>Admin dashboard</h1>
+<div class="grid">
+  <div class="card"><p class="big"><%= draws.n %></p><p>Draws (<%= draws.pub || 0 %> published)</p></div>
+  <div class="card"><p class="big"><%= users.n %></p><p>Registered users</p></div>
+  <div class="card"><p class="big"><%= sets.n %></p><p>Saved number sets</p></div>
+</div>
+<p><a class="btn" href="/admin/draws/new">Add draw / publish result</a></p>
+<%- include('../partials/foot') %>
