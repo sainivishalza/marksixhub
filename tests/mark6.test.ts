@@ -130,6 +130,8 @@ test('xlsx reader: text, numbers, empty cells and XML entities', async () => {
   assert.equal(rows[2][8], '&<>"x');
   assert.equal(rows[3][1], null);
   assert.throws(() => readXlsx(Buffer.from('not a zip file at all, just text')), /not an Excel/);
+});
+
 test('winning units display like the HKJC: one decimal, a dash for none', async () => {
   const { unitsLabel } = await import('../src/lib/format.ts');
   assert.equal(unitsLabel(2.5), '2.5');
