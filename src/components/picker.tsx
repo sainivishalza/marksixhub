@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition, type KeyboardEvent } from 'react';
+import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Copy, Eraser, Share2, Sparkles } from 'lucide-react';
+import { Bookmark, Copy, Eraser, Share2, Sparkles } from 'lucide-react';
+import { saveSetAction } from '@/actions/account';
 import { Button } from '@/components/ui/button';
 import { ballClass } from '@/components/ball';
 import { ALL_BALLS, DIVISION_LABEL, evaluate, isBall, quickPick, sortAsc } from '@/lib/mark6';
@@ -11,11 +13,12 @@ import type { Currency, Prize } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type LatestDraw = { drawNo: string; numbers: number[]; extra: number | null };
-type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; id?: string };
+type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; loggedIn?: boolean; id?: string };
 
 const PICK = 6;
 
-export function Picker({ latest, prizes, currency, id = 'board' }: Props) {
+export function Picker({ latest, prizes, currency, loggedIn = false, id = 'board' }: Props) {
+  const [saving, startSaving] = useTransition();
   const reduce = useReducedMotion();
   const [sel, setSel] = useState<number[]>([]);
   const [cursor, setCursor] = useState(1);
@@ -134,6 +137,12 @@ export function Picker({ latest, prizes, currency, id = 'board' }: Props) {
     }
   };
 
+  const save = () =>
+    startSaving(async () => {
+      const res = await saveSetAction(sorted);
+      setStatus(res.message);
+    });
+
   const verdict = (() => {
     if (!complete || !latest) return null;
     const ev = evaluate(sorted, latest.numbers, latest.extra);
@@ -232,7 +241,19 @@ export function Picker({ latest, prizes, currency, id = 'board' }: Props) {
           <Share2 aria-hidden className="h-4 w-4" />
           Share
         </Button>
+        {loggedIn ? (
+          <Button variant="outline" onClick={save} disabled={!complete || saving}>
+            <Bookmark aria-hidden className="h-4 w-4" />
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        ) : null}
       </div>
+      {!loggedIn && complete ? (
+        <p className="mt-3 text-sm text-mute">
+          <Link href="/login?next=/picker" className="text-gold-bright underline-offset-4 hover:underline">Log in</Link> or{' '}
+          <Link href="/register" className="text-gold-bright underline-offset-4 hover:underline">create a free account</Link> to save this ticket.
+        </p>
+      ) : null}
 
       <p role="status" aria-live="polite" className="mt-3 min-h-[1.25rem] text-sm text-mute">
         {status}

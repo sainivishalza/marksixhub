@@ -1,13 +1,10 @@
 import Link from 'next/link';
 import { JsonLd } from '@/components/json-ld';
 import { DIVISION_LABEL, DIVISION_RULE } from '@/lib/mark6';
-import { breadcrumbLd, pageMetadata } from '@/lib/seo';
+import { breadcrumbLd } from '@/lib/seo';
+import { seoMetadata } from '@/lib/seo-db';
 
-export const metadata = pageMetadata({
-  title: 'How to Play Mark Six: Rules and Prize Divisions',
-  description: 'Mark Six explained in plain words: pick 6 numbers from 1 to 49, how the extra number works and what each of the 7 prize divisions needs.',
-  path: '/guide',
-});
+export const generateMetadata = () => seoMetadata('/guide');
 
 export default function GuidePage() {
   return (

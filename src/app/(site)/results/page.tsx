@@ -2,15 +2,12 @@ import Link from 'next/link';
 import { JsonLd } from '@/components/json-ld';
 import { ResultsTable } from '@/components/results-table';
 import { getDraws } from '@/lib/data';
-import { breadcrumbLd, pageMetadata } from '@/lib/seo';
+import { breadcrumbLd } from '@/lib/seo';
+import { seoMetadata } from '@/lib/seo-db';
 
 const PER_PAGE = 20;
 
-export const metadata = pageMetadata({
-  title: 'Mark Six Results: Winning Numbers and Prizes',
-  description: 'Every Hong Kong Mark Six draw with the six winning numbers, the extra number and the prize for each division.',
-  path: '/results',
-});
+export const generateMetadata = () => seoMetadata('/results');
 
 type SearchParams = Promise<{ page?: string; sort?: string }>;
 

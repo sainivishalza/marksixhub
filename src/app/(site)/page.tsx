@@ -7,9 +7,11 @@ import { Jackpot } from '@/components/jackpot';
 import { Picker } from '@/components/picker';
 import { ResultStub } from '@/components/result-stub';
 import { ResultsTable } from '@/components/results-table';
-import { getCurrentCurrency, getDraws, getEvents, getLatestDraw, getNextDraw, getPrizes } from '@/lib/data';
-import { FAQS } from '@/lib/faq';
+import { getUser } from '@/lib/auth';
+import { getCurrentCurrency, getDraws, getEvents, getFaqs, getLatestDraw, getNextDraw, getPrizes } from '@/lib/data';
 import { dateLabel, drawMoment } from '@/lib/format';
+import { seoMetadata } from '@/lib/seo-db';
+import { getSettings } from '@/lib/settings';
 
 const STEPS = [
   { icon: Dices, title: 'Choose six numbers', text: 'Tap six numbers on the board, or press Quick pick and we choose for you.' },
@@ -23,13 +25,18 @@ const FACTS = [
   { icon: ShieldCheck, text: 'Independent site. We never take bets or hold money' },
 ];
 
+export const generateMetadata = () => seoMetadata('/');
+
 export default async function HomePage() {
-  const [{ current }, latest, next, recent, events] = await Promise.all([
+  const [{ current }, latest, next, recent, events, faqs, user, settings] = await Promise.all([
     getCurrentCurrency(),
     getLatestDraw(),
     getNextDraw(),
     getDraws(5),
     getEvents(),
+    getFaqs(),
+    getUser(),
+    getSettings(),
   ]);
   const prizes = latest ? await getPrizes(latest.id) : [];
 
@@ -43,7 +50,7 @@ export default async function HomePage() {
           </p>
 
           <div className="mt-8">
-            {next && next.estJackpotHkd > 0 ? (
+            {!settings.showJackpot ? null : next && next.estJackpotHkd > 0 ? (
               <>
                 <Jackpot valueHkd={next.estJackpotHkd} currency={current} />
                 <p className="mt-1 text-sm text-mute">
@@ -74,6 +81,7 @@ export default async function HomePage() {
             latest={latest ? { drawNo: latest.drawNo, numbers: latest.numbers, extra: latest.extra } : null}
             prizes={prizes}
             currency={current}
+            loggedIn={Boolean(user)}
           />
         </div>
       </section>
@@ -145,7 +153,7 @@ export default async function HomePage() {
 
       <section className="mx-auto mt-24 max-w-3xl px-4 sm:px-6 lg:px-8">
         <h2 className="mb-4 text-3xl">Common questions</h2>
-        <FaqList items={FAQS.slice(0, 5)} />
+        <FaqList items={faqs.slice(0, 5)} />
         <p className="mt-5">
           <Link href="/faq" className="text-gold-bright underline-offset-4 hover:underline">More questions and answers</Link>
         </p>

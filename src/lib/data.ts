@@ -2,6 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import type { RowDataPacket } from 'mysql2/promise';
 import { dbConfigured, query } from './db';
+import { FAQS, type Faq } from './faq';
 import { HKD } from './format';
 import { sampleCurrencies, sampleDraws, sampleEvents, sampleNext, samplePrizes } from './sample';
 import type { Currency, Draw, EventItem, Prize } from './types';
@@ -9,12 +10,12 @@ import type { Currency, Draw, EventItem, Prize } from './types';
 // With no database configured, development shows sample data; production never does.
 const useSample = !dbConfigured && process.env.NODE_ENV !== 'production';
 
-type DrawRow = RowDataPacket & {
+export type DrawRow = RowDataPacket & {
   id: number; draw_no: string; draw_date: string; status: 'upcoming' | 'published';
   nums: string | null; extra: number | null; est_jackpot_hkd: number | string; note: string | null;
 };
 
-const toDraw = (r: DrawRow): Draw => ({
+export const toDraw = (r: DrawRow): Draw => ({
   id: r.id,
   drawNo: r.draw_no,
   drawDate: r.draw_date,
@@ -59,6 +60,20 @@ export async function getPrizes(drawId: number): Promise<Prize[]> {
     [drawId],
   );
   return rows.map((r) => ({ division: r.division, winners: r.winners, prizeHkd: Number(r.prize_hkd) }));
+}
+
+/** Admin-managed FAQ entries, or the built-in defaults when none exist yet. */
+export async function getFaqs(): Promise<Faq[]> {
+  if (useSample || !dbConfigured) return FAQS;
+  try {
+    const rows = await query<RowDataPacket & { question: string; answer: string }>(
+      'SELECT question, answer FROM faqs WHERE active=1 ORDER BY sort_order, id',
+    );
+    return rows.length ? rows.map((r) => ({ q: r.question, a: r.answer })) : FAQS;
+  } catch (err) {
+    console.error('faqs unavailable, using defaults:', err);
+    return FAQS;
+  }
 }
 
 export async function getEvents(): Promise<EventItem[]> {
