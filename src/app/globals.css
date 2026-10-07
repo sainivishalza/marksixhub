@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: #0a0e1a;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-night font-sans text-ivory antialiased;
+    background-image:
+      radial-gradient(1100px 520px at 85% -10%, rgba(212, 175, 55, 0.13), transparent 60%),
+      radial-gradient(900px 480px at -10% 30%, rgba(31, 79, 216, 0.1), transparent 60%);
+    background-repeat: no-repeat;
+  }
+  h1, h2, h3 {
+    @apply font-serif tracking-tight text-ivory;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold-bright ring-offset-2 ring-offset-night;
+  }
+  ::selection {
+    background: #d4af37;
+    color: #0a0e1a;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@layer components {
+  /* Lacquered Mark Six ball: real red/blue/green colour sets with a specular highlight. */
+  .ball {
+    @apply relative inline-grid place-items-center rounded-full font-mono font-bold text-white shadow-lacquer;
+    font-variant-numeric: tabular-nums;
+    background-image:
+      radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 38%),
+      radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.35), transparent 60%);
+  }
+  .ball-red { background-color: theme('colors.ball.red'); }
+  .ball-blue { background-color: theme('colors.ball.blue'); }
+  .ball-green { background-color: theme('colors.ball.green'); }
+  .ball-extra { @apply ring-2 ring-gold-bright ring-offset-2 ring-offset-panel; }
+
+  .gold-text {
+    @apply bg-clip-text text-transparent motion-reduce:animate-none;
+    background-image: linear-gradient(110deg, #8f7320 0%, #f5c542 30%, #d4af37 50%, #f5c542 70%, #8f7320 100%);
+    background-size: 200% 100%;
+    animation: shimmer 7s linear infinite;
+  }
+
+  .surface {
+    @apply rounded-2xl border border-line bg-panel/80 shadow-panel backdrop-blur;
+  }
+
+  /* Ticket stub: notches cut into both sides. */
+  .stub {
+    @apply bg-panel;
+    -webkit-mask:
+      radial-gradient(circle 11px at 0 58%, transparent 98%, #000) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% 58%, transparent 98%, #000) right / 51% 100% no-repeat;
+    mask:
+      radial-gradient(circle 11px at 0 58%, transparent 98%, #000) left / 51% 100% no-repeat,
+      radial-gradient(circle 11px at 100% 58%, transparent 98%, #000) right / 51% 100% no-repeat;
+  }
+
+  .prose-site p { @apply max-w-[68ch] text-mute leading-relaxed; }
+  .prose-site p + p { @apply mt-4; }
+}

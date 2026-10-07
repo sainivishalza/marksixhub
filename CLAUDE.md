@@ -1,35 +1,32 @@
 # Mark Six Hub
 
 ## Goal
-marksixhub.com: information-only Hong Kong Mark Six site (results, prizes, draw calendar, number generator, accounts for saved numbers, admin panel). NO betting, NO wallets, NO proxy orders (illegal/regulated). No horse racing. Never put "HKJC" in branding. Minimal code, zero known bugs.
+marksixhub.com: information-only Hong Kong Mark Six site (number picker, results, prizes, draw calendar, guide/FAQ, accounts for saved numbers, admin panel). NO betting, NO wallets, NO proxy orders (illegal/regulated). No horse racing. Never put "HKJC" in branding. Minimal code, zero known bugs.
 
 ## Workflow
-- At session start: read TASKS.md and continue. At end: update TASKS.md.
+- At session start: read TASKS.md and DESIGN.md. At end: update TASKS.md.
 - Log non-obvious choices in DECISIONS.md. One task at a time.
-- Read only files you need; never read node_modules or logs.
-- Before finishing any change: `npm test` must pass.
+- Never read node_modules or .next. Before finishing a change: `npm run typecheck`, `npm test`, `npm run build`.
+- Branches: `main` = live Express site (still deployed on Hostinger). `nextjs` = the Next.js rebuild. Do not merge to main until TASKS.md says parity is reached.
 
-## Stack and layout
-Node 20+, Express 5, EJS views, MySQL (mysql2), no front-end framework, no client JS.
-- `server.js` entry. `src/app.js` middleware, `src/context.js` per-request locals, `src/setup.js` schema + seeds
-- `src/routes/{site,account,admin}.js`, `src/security.js` (scrypt, CSRF, rate limit), `src/mark6.js` (generator, stats)
-- `views/` (admin in `views/admin/`), `public/` static files, `tests/` (node:test, DB is faked)
-- Config only from env vars (see `.env.example`). Never commit `.env`; the repo is public.
+## Stack (branch nextjs)
+Next.js 16 App Router, React 19, TypeScript strict, Tailwind 3 (tokens in tailwind.config.ts), Framer Motion, Radix accordion, MySQL via mysql2.
+- `src/app/*` routes. `src/components/*` UI. `src/lib/*`: `mark6.ts` (ball colours, quickPick, evaluate), `data.ts` (server-only DB reads), `format.ts`, `seo.ts`, `sample.ts` (dev-only fixtures when no DB is configured).
+- `legacy-express/` is the old app, kept for reference until parity. Same MySQL tables; only add new tables, never change existing ones.
+- Config from env vars only (`.env.example`). Never commit `.env`; the repo is public.
 
 ## Code rules
-- Least code possible. No dependency unless clearly necessary; pin versions.
-- Files under ~300 lines. No dead code, no duplicate logic.
-- Every SQL uses `?` placeholders. Every template output uses `<%= %>` (escaped); `<%-` only for trusted HTML.
-- Every POST form includes `<%- csrfField() %>`. Admin routes sit behind `requireAdmin`.
+- Least code possible. Server components by default; `'use client'` only for the picker, countdown, jackpot, check form, currency switch, accordion.
+- Tailwind class names must appear in full in source (no `` `ball-${x}` ``). Do not name a colour `base` (clashes with `text-base`).
+- Prizes stored in HKD; other currencies are display-only conversions.
+- Every SQL uses `?` placeholders. User-supplied text is rendered as text only (React escapes it).
 
 ## Security
-- CSP is `'self'` only: no inline scripts, no inline `style=` attributes, no external hosts.
-- Passwords: scrypt. Rate-limit auth routes. Redirect targets go through `safeNext`.
-- Store money amounts in HKD; other currencies are display-only conversions.
+- Headers in next.config.ts. Hostinger may overwrite CSP; do not rely on CSP alone.
+- Passwords: scrypt (format `s1$salt$hash`, same as legacy). Sessions: signed cookie (jose). Rate-limit auth routes. Redirect targets must be same-site paths.
 
 ## SEO
-- One h1 per page, unique title and meta description, canonical URL, sitemap/robots generated in `routes/site.js`.
-- Private pages (account, admin, login) are `noindex`.
+- One h1 per page, Metadata API on every page via `pageMetadata()`, canonical URLs, JSON-LD (WebSite, BreadcrumbList, FAQPage, Event), sitemap.ts, robots.ts, OG images. Private pages are noindex.
 
-## Performance budget
-- Lighthouse 95+. No client JS. Gzip on. Static assets cached.
+## Design
+See DESIGN.md. Balls are the only saturated colour; gold means actionable/selected. Mobile first, keyboard accessible, reduced motion respected.
