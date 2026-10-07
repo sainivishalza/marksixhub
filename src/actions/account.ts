@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import type { RowDataPacket } from 'mysql2/promise';
 import { clientIp, createSession, destroySession, getUser, ipHash, requireUser, touchLogin } from '@/lib/auth';
 import { dbConfigured, exec, query, tx } from '@/lib/db';
-import { isBall, MAX_MULTI, sortAsc, ticketUnits } from '@/lib/mark6';
+import { isBall, sortAsc } from '@/lib/mark6';
 import { can, type Role } from '@/lib/perms';
 import { newTotpSecret, verifyTotp } from '@/lib/totp';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
@@ -101,13 +101,13 @@ export async function logoutAction() {
 
 const MAX_PER_ORDER = 20;
 
-/** Places one order of tickets for the next draw. A ticket is 6 numbers (single) or 7 to 12 (multiple, worth C(n,6) tickets). */
+/** Places one order of tickets for the next draw. Every ticket is exactly 6 different numbers from 1 to 49. */
 export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolean; message: string; points?: number; orderId?: number }> {
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in to place tickets.' };
   const tickets = (Array.isArray(sets) ? sets : []).slice(0, MAX_PER_ORDER).map((s) => [...new Set(Array.isArray(s) ? s.map(Number) : [])]);
-  if (!tickets.length || tickets.some((t) => t.length < 6 || t.length > MAX_MULTI || !t.every(isBall))) {
-    return { ok: false, message: `Each ticket needs 6 different numbers (or up to ${MAX_MULTI} for a multiple entry), from 1 to 49.` };
+  if (!tickets.length || tickets.some((t) => t.length !== 6 || !t.every(isBall))) {
+    return { ok: false, message: 'Each ticket needs exactly 6 different numbers from 1 to 49.' };
   }
   const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM saved_sets WHERE user_id=?', [user.id]);
   if (Number(n) + tickets.length > MAX_SETS) return { ok: false, message: `You can keep up to ${MAX_SETS} tickets. Delete some first.` };
@@ -116,8 +116,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
   const next = { draw_no: open.drawNo };
 
   const { ticketPoints } = await getSettings();
-  const units = tickets.map((t) => ticketUnits(t.length));
-  const total = units.reduce((a, b) => a + b, 0);
+  const total = tickets.length;
   const cost = ticketPoints * total;
   const label = `${total} ticket${total === 1 ? '' : 's'}`;
   const left = await tx(async (t) => {
@@ -125,8 +124,8 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
     if (!res.affectedRows) return null;
     await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [user.id, -cost, `${label}, draw ${next.draw_no}`]);
     const orderId = (await t.exec('INSERT INTO orders (user_id, draw_no, tickets, points) VALUES (?,?,?,?)', [user.id, next.draw_no, total, cost])).insertId;
-    for (const [i, tk] of tickets.entries()) {
-      await t.exec('INSERT INTO saved_sets (user_id, nums, draw_no, order_id, units) VALUES (?,?,?,?,?)', [user.id, sortAsc(tk).join(','), next.draw_no, orderId, units[i]]);
+    for (const tk of tickets) {
+      await t.exec('INSERT INTO saved_sets (user_id, nums, draw_no, order_id, units) VALUES (?,?,?,?,?)', [user.id, sortAsc(tk).join(','), next.draw_no, orderId, 1]);
     }
     const [u] = await t.query<RowDataPacket & { points: number }>('SELECT points FROM users WHERE id=?', [user.id]);
     return { points: Number(u.points), orderId };
@@ -201,7 +200,7 @@ export async function saveFavouriteAction(numbers: number[]): Promise<{ ok: bool
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in to save favourites.' };
   const nums = sortAsc([...new Set(Array.isArray(numbers) ? numbers.map(Number) : [])]);
-  if (nums.length < 6 || nums.length > MAX_MULTI || !nums.every(isBall)) return { ok: false, message: 'Choose a full set of numbers first.' };
+  if (nums.length !== 6 || !nums.every(isBall)) return { ok: false, message: 'Choose 6 numbers first.' };
   const list = await favourites(user.id);
   if (list.length >= MAX_FAVOURITES) return { ok: false, message: `You can keep ${MAX_FAVOURITES} favourites. Remove one first.` };
   const key = nums.join(',');

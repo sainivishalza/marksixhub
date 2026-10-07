@@ -7,7 +7,7 @@ import { Copy, Eraser, Heart, Plus, Share2, Sparkles, Ticket, X } from 'lucide-r
 import { deleteFavouriteAction, placeTicketsAction, saveFavouriteAction, type Favourite } from '@/actions/account';
 import { Button } from '@/components/ui/button';
 import { NumberBall, ballClass, ringClass } from '@/components/ball';
-import { ALL_BALLS, DIVISION_LABEL, MAX_MULTI, evaluate, isBall, quickPick, sortAsc, ticketUnits } from '@/lib/mark6';
+import { ALL_BALLS, DIVISION_LABEL, evaluate, isBall, quickPick, sortAsc } from '@/lib/mark6';
 import { money } from '@/lib/format';
 import type { Currency, Prize } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -48,8 +48,8 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
   const grid = useRef<HTMLDivElement>(null);
   const timers = useRef<number[]>([]);
   const sorted = sortAsc(sel);
-  const max = mode === 'multiple' ? MAX_MULTI : PICK;
-  const complete = mode === 'multiple' ? sel.length > PICK : sel.length === PICK;
+  const max = PICK;
+  const complete = sel.length === PICK;
 
   const stopTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -65,14 +65,23 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       setStatus(`You already have ${max} numbers. Remove one first.`);
     } else {
       const next = [...sel, n];
+      if (mode === 'multiple' && next.length === PICK) {
+        addSet(sortAsc(next));
+        return;
+      }
       setSel(next);
-      setStatus(
-        `Added ${n}. ${next.length} chosen.` + (complete_(next) ? ` Your numbers: ${sortAsc(next).join(', ')}.` : ''),
-      );
+      setStatus(`Added ${n}. ${next.length} of ${PICK} chosen.` + (next.length === PICK ? ` Your numbers: ${sortAsc(next).join(', ')}.` : ''));
     }
   };
 
-  const complete_ = (n: number[]) => (mode === 'multiple' ? n.length > PICK : n.length === PICK);
+  // Multiple entry: every completed set of 6 becomes a ticket on the slip and the board clears for the next one.
+  const addSet = (set: number[]) => {
+    setSel([]);
+    if (slip.length >= MAX_ORDER) return setStatus(`An order holds up to ${MAX_ORDER} tickets. Place it first.`);
+    if (slip.some((t) => t.join(',') === set.join(','))) return setStatus('That ticket is already on your slip. Choose a different 6.');
+    setSlip([...slip, set]);
+    setStatus(`Ticket ${slip.length + 1} added: ${set.join(', ')}. Now choose the next 6 numbers.`);
+  };
 
   const changeMode = (m: Mode) => {
     stopTimers();
@@ -142,7 +151,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       .split('|')
       .slice(0, MAX_ORDER)
       .map((x) => [...new Set(x.split(',').map(Number))].filter(isBall))
-      .filter((t) => t.length >= PICK && t.length <= MAX_MULTI);
+      .filter((t) => t.length === PICK);
     if (again.length) setSlip(again);
     const shared = params.get('n');
     if (!shared) return;
@@ -187,7 +196,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
   };
 
   const key = sorted.join(',');
-  const cost = (tickets: number[][]) => tickets.reduce((a, t) => a + ticketUnits(t.length), 0) * (wallet?.cost ?? 0);
+  const cost = (tickets: number[][]) => tickets.length * (wallet?.cost ?? 0);
 
   const addFavourite = () =>
     startPlacing(async () => {
@@ -261,7 +270,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
         <h2 id={`${id}-title`} className="text-xl">Number board</h2>
         {mode !== 'quick' ? (
           <p className="font-mono text-sm text-mute" aria-hidden>
-            <span className="text-gold-bright">{sel.length}</span>{mode === 'multiple' ? ` chosen (7 to ${MAX_MULTI})` : `/${PICK} chosen`}
+            <span className="text-gold-bright">{sel.length}</span>/{PICK} chosen{mode === 'multiple' ? `, ticket ${slip.length + 1}` : ''}
           </p>
         ) : null}
       </div>
@@ -282,8 +291,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       </div>
       {mode === 'multiple' ? (
         <p className="mb-3 text-sm text-mute">
-          Choose 7 to {MAX_MULTI} numbers. Every set of 6 inside them is one ticket
-          {sel.length > PICK ? <>: <span className="font-mono text-ivory">{ticketUnits(sel.length)}</span> tickets{wallet ? <>, <span className="font-mono text-ivory">{ticketUnits(sel.length) * wallet.cost}</span> points</> : null}</> : null}.
+          Pick 6 numbers, then 6 more, and so on. Each set of 6 becomes one ticket on your slip (up to {MAX_ORDER}).
         </p>
       ) : null}
 
@@ -398,16 +406,18 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
                 </Button>
               </>
             ) : null}
-            {wallet ? (
+            {mode === 'single' && wallet ? (
               <Button variant="outline" onClick={addFavourite} disabled={!complete || placing}>
                 <Heart aria-hidden className="h-4 w-4" />
                 Favourite
               </Button>
             ) : null}
-            <Button variant="outline" onClick={addToSlip} disabled={!complete}>
-              <Plus aria-hidden className="h-4 w-4" />
-              Add to slip
-            </Button>
+            {mode === 'single' ? (
+              <Button variant="outline" onClick={addToSlip} disabled={!complete}>
+                <Plus aria-hidden className="h-4 w-4" />
+                Add to slip
+              </Button>
+            ) : null}
           </>
         ) : null}
       </div>
@@ -418,7 +428,6 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
             <li key={t.join(',')} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
               <span className="flex min-w-0 flex-wrap items-center gap-1">
                 {t.map((n) => <NumberBall key={n} n={n} size="sm" />)}
-                {t.length > PICK ? <span className="ml-1 text-xs text-mute">multiple, {ticketUnits(t.length)} tickets</span> : null}
               </span>
               <button type="button" aria-label={`Remove ticket ${t.join(' ')}`} onClick={() => setSlip(slip.filter((_, k) => k !== i))} className="shrink-0 text-mute hover:text-ivory">
                 <X aria-hidden className="h-4 w-4" />
@@ -463,10 +472,10 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
           </p>
           <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo}>
             <Ticket aria-hidden className="h-4 w-4" />
-            {placing ? 'Placing...' : orders.length ? `Place order: ${orders.reduce((a, t) => a + ticketUnits(t.length), 0)} ticket${orders.length === 1 && orders[0].length === PICK ? '' : 's'} (${cost(orders)} points)` : 'Place order'}
+            {placing ? 'Placing...' : orders.length ? `Place order: ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${cost(orders)} points)` : 'Place order'}
           </Button>
         </div>
-      ) : complete ? (
+      ) : complete || slip.length ? (
         <p className="mt-3 text-sm text-mute">
           <Link href="/login?next=/picker" className="text-gold-bright underline-offset-4 hover:underline">Log in</Link> or{' '}
           <Link href="/register" className="text-gold-bright underline-offset-4 hover:underline">create a free account</Link> to place tickets with free points.

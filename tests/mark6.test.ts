@@ -77,11 +77,9 @@ test('totp matches the RFC 6238 test vector and rejects wrong codes', async () =
   assert.match(newTotpSecret(), /^[A-Z2-7]{32}$/);
 });
 
-test('multiple entries: combination counts and units', async () => {
-  const { combinations, ticketUnits } = await import('../src/lib/mark6.ts');
-  assert.equal(ticketUnits(6), 1);
-  assert.equal(ticketUnits(7), 7);
-  assert.equal(ticketUnits(12), 924);
+test('combinations of 6 inside a set', async () => {
+  const { combinations } = await import('../src/lib/mark6.ts');
+  assert.equal(combinations([1, 2, 3, 4, 5, 6]).length, 1);
   const c = combinations([1, 2, 3, 4, 5, 6, 7]);
   assert.equal(c.length, 7);
   assert.ok(c.every((x) => x.length === 6 && new Set(x).size === 6));
