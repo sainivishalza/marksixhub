@@ -8,3 +8,5 @@
 - 2026-10-07: User chose the full Next.js rewrite (Next 16, Tailwind 3, Framer Motion). Built on branch `nextjs`; live Express site stays on `main` until parity. Old code moved to `legacy-express/`. Same MySQL tables so data and admin account carry over.
 - 2026-10-07: Hostinger replaces the CSP response header with `upgrade-insecure-requests`, so the Express app also sends CSP as a meta tag. Next.js app relies on safe React rendering, next.config headers, and does not depend on CSP alone.
 - 2026-10-07: Colour token named `night`, not `base` (clashed with Tailwind `text-base` font size and turned ball digits dark). Ball class names written in full so Tailwind does not purge blue/green.
+- 2026-10-07: Next.js app deploys under Hostinger's existing Express preset: root `server.js` starts Next, `postinstall` runs `next build` when NODE_ENV=production, and build tools live in `dependencies` (production installs skip devDependencies). Verified in a clean-folder simulation. Chosen so no hPanel settings need changing.
+- 2026-10-07: Admin and account pages always read cookies first so they are never prerendered; every server action calls requireRole/requireUser itself.
