@@ -3,6 +3,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { exec, query } from './db';
 import { FAQS } from './faq';
 import { hashPassword } from './password';
+import { makeOrderNo } from './receipt';
 
 // Same tables as the legacy Express app, so existing data and accounts carry over. Everything here is additive and safe to re-run.
 const TABLES = [
@@ -215,6 +216,16 @@ export async function migrate() {
   if (!(await hasColumn('users', 'email_verified'))) {
     await exec('ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN pending_bonus INT NOT NULL DEFAULT 0');
     await exec('UPDATE users SET email_verified=1'); // accounts that already exist are not asked to confirm
+  }
+
+  if (!(await hasColumn('orders', 'order_no'))) {
+    await exec('ALTER TABLE orders ADD COLUMN seq INT NULL, ADD COLUMN order_no VARCHAR(20) NULL, ADD UNIQUE KEY uq_order_no (order_no), ADD UNIQUE KEY uq_draw_seq (draw_no, seq)');
+  }
+  // Orders from before numbering get the next number of their draw, oldest first. Safe to repeat.
+  const unnumbered = await query<RowDataPacket & { id: number; draw_no: string }>('SELECT id, draw_no FROM orders WHERE order_no IS NULL ORDER BY id');
+  for (const o of unnumbered) {
+    const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM orders WHERE draw_no=?', [o.draw_no]);
+    await exec('UPDATE orders SET seq=?, order_no=? WHERE id=?', [Number(n), makeOrderNo(o.draw_no, Number(n)), o.id]);
   }
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);

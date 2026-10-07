@@ -15,13 +15,13 @@ const INK = '#16181d';
 const MUTE = '#5b616e';
 const rule = { display: 'flex', flexShrink: 0, width: '100%', borderTop: '2px dashed #9aa0ac', marginTop: 18, marginBottom: 18 } as const;
 
-// The receipt is a PNG so it can be saved or shared as it is. Only the owner can fetch it.
+// The receipt is a PNG so it can be saved or shared as it is. It exists only once the admin has accepted the order, and only the owner can fetch it.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = parseInt((await params).id, 10);
   const user = await getUser();
   if (!user || !Number.isInteger(id)) return new Response('Not found', { status: 404 });
-  const [order] = await query<RowDataPacket & { draw_no: string; tickets: number; points: number; status: string; created_at: string }>(
-    'SELECT draw_no, tickets, points, status, created_at FROM orders WHERE id=? AND user_id=?',
+  const [order] = await query<RowDataPacket & { draw_no: string; tickets: number; points: number; status: string; created_at: string; order_no: string | null }>(
+    "SELECT draw_no, tickets, points, status, created_at, order_no FROM orders WHERE id=? AND user_id=? AND status='accepted'",
     [id, user.id],
   );
   if (!order) return new Response('Not found', { status: 404 });
@@ -60,7 +60,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         <div style={{ display: 'flex', flexShrink: 0, fontSize: 26, marginTop: 22 }}>{receiptDate(order.created_at)} HKT</div>
         <div style={{ display: 'flex', flexShrink: 0, fontSize: 26, marginTop: 8, fontWeight: 700 }}>Status: {label}</div>
         <div style={rule} />
-        <div style={{ display: 'flex', flexShrink: 0, fontSize: 24 }}>Order No.: {String(id).padStart(6, '0')}</div>
+        <div style={{ display: 'flex', flexShrink: 0, fontSize: 24 }}>Order No.: {order.order_no ?? String(id).padStart(6, '0')}</div>
         <div style={{ display: 'flex', flexShrink: 0, fontSize: 24, marginTop: 6 }}>Ref.: {ref}</div>
         <div style={{ display: 'flex', flexShrink: 0, fontSize: 20, color: MUTE, marginTop: 18 }}>{host}</div>
       </div>

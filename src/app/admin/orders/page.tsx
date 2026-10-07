@@ -82,7 +82,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           >
             {orders.map((o) => (
               <tr key={o.id} className="align-top">
-                <th scope="row" className="px-4 py-3 font-mono">#{o.id}</th>
+                <th scope="row" className="px-4 py-3 font-mono">{o.orderNo}</th>
                 <td className="max-w-[14rem] truncate px-4 py-3">{o.email}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-mute">{o.createdAt.slice(0, 16)}</td>
                 <td className="px-4 py-3">

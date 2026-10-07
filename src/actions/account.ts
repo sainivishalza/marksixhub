@@ -13,6 +13,7 @@ import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
 import { createHash, randomBytes } from 'node:crypto';
 import { BASE_URL } from '@/lib/seo';
 import { mailConfigured, sendMail } from '@/lib/mail';
+import { makeOrderNo } from '@/lib/receipt';
 import { findVerification, markVerified, sendVerification, useVerification } from '@/lib/verify';
 import { addPoints, openDraw } from '@/lib/points';
 import { getSettings } from '@/lib/settings';
@@ -129,17 +130,21 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
   const left = await tx(async (t) => {
     const res = await t.exec('UPDATE users SET points = points - ? WHERE id=? AND points >= ?', [cost, user.id, cost]);
     if (!res.affectedRows) return null;
-    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [user.id, -cost, `${label}, draw ${next.draw_no}`]);
-    const orderId = (await t.exec("INSERT INTO orders (user_id, draw_no, tickets, points, status) VALUES (?,?,?,?,'pending')", [user.id, next.draw_no, total, cost])).insertId;
+    // Lock the draw row so two people ordering at once cannot get the same number.
+    await t.query('SELECT id FROM draws WHERE draw_no=? FOR UPDATE', [next.draw_no]);
+    const [{ n: seq }] = await t.query<RowDataPacket & { n: number }>('SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM orders WHERE draw_no=?', [next.draw_no]);
+    const orderNo = makeOrderNo(next.draw_no, Number(seq));
+    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [user.id, -cost, `Order ${orderNo}, ${label}`]);
+    const orderId = (await t.exec("INSERT INTO orders (user_id, draw_no, tickets, points, status, seq, order_no) VALUES (?,?,?,?,'pending',?,?)", [user.id, next.draw_no, total, cost, Number(seq), orderNo])).insertId;
     for (const tk of tickets) {
       await t.exec('INSERT INTO saved_sets (user_id, nums, draw_no, order_id, units) VALUES (?,?,?,?,?)', [user.id, sortAsc(tk).join(','), next.draw_no, orderId, 1]);
     }
     const [u] = await t.query<RowDataPacket & { points: number }>('SELECT points FROM users WHERE id=?', [user.id]);
-    return { points: Number(u.points), orderId };
+    return { points: Number(u.points), orderId, orderNo };
   });
   if (left === null) return { ok: false, message: `You need ${cost} points for ${label}. Claim your free daily points in My account.` };
   revalidatePath('/account');
-  return { ok: true, points: left.points, orderId: left.orderId, message: `Order submitted: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left. It is pending until the admin approves it.` };
+  return { ok: true, points: left.points, orderId: left.orderId, message: `Order ${left.orderNo} submitted: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left. Your receipt is issued when the admin accepts it.` };
 }
 
 export async function claimDailyAction() {

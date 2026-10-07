@@ -23,3 +23,6 @@ export const STATUS_LABEL: Record<string, string> = {
   rejected: 'REJECTED, POINTS RETURNED',
   refunded: 'REFUNDED, POINTS RETURNED',
 };
+
+/** Draw 26/107, 1st order of that draw: "261070001". The sequence restarts for every draw. */
+export const makeOrderNo = (drawNo: string, seq: number) => `${drawNo.replace(/\D/g, '')}${String(seq).padStart(4, '0')}`;

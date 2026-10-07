@@ -13,14 +13,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   const id = parseInt((await params).id, 10);
   const user = await requireUser(`/account/orders/${id}`);
   const [order] = Number.isInteger(id)
-    ? await query<RowDataPacket & { draw_no: string; tickets: number; points: number; refunded: number; status: string; created_at: string }>('SELECT draw_no, tickets, points, refunded, status, created_at FROM orders WHERE id=? AND user_id=?', [id, user.id])
+    ? await query<RowDataPacket & { draw_no: string; tickets: number; points: number; refunded: number; status: string; created_at: string; order_no: string | null }>('SELECT draw_no, tickets, points, refunded, status, created_at, order_no FROM orders WHERE id=? AND user_id=?', [id, user.id])
     : [];
   if (!order) notFound();
   const sets = await query<RowDataPacket & { nums: string; units: number; settled: number; won_points: number }>('SELECT nums, units, settled, won_points FROM saved_sets WHERE order_id=? AND user_id=? ORDER BY id', [id, user.id]);
   const again = sets.map((s) => s.nums).join('|');
   return (
     <div className="mx-auto max-w-xl px-4 py-12 sm:px-6">
-      <h1 className="text-3xl">Order #{id}</h1>
+      <h1 className="text-3xl">Order No. {order.order_no ?? id}</h1>
       <p className="mt-2 text-mute">
         Draw {order.draw_no}. Placed {String(order.created_at).slice(0, 16)} UTC. {order.tickets} ticket{order.tickets === 1 ? '' : 's'}, {order.points} points.
       </p>
@@ -30,13 +30,20 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           {order.status === 'pending' ? 'Pending, waiting for admin approval' : order.status === 'accepted' ? 'Accepted, waiting for the result' : order.status === 'rejected' ? 'Rejected, points returned' : 'Refunded, points returned'}
         </strong>
       </p>
+      {order.status === 'pending' ? (
+        <p className="mt-6 rounded-xl border border-gold/50 p-4 text-sm text-ivory">
+          Your numbers are waiting for the admin to accept them. Your receipt is issued here as soon as they do, and you can download it then.
+        </p>
+      ) : null}
+      {order.status === 'accepted' ? (
       <div className="mt-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/account/orders/${id}/receipt`} alt={`Receipt for order ${id}, draw ${order.draw_no}, ${order.tickets} ticket${order.tickets === 1 ? '' : 's'}, ${order.points} points`} className="mx-auto w-full max-w-[420px] rounded-md bg-white shadow-panel" />
+        <img src={`/account/orders/${id}/receipt`} alt={`Receipt for order ${order.order_no ?? id}, draw ${order.draw_no}, ${order.tickets} ticket${order.tickets === 1 ? '' : 's'}, ${order.points} points`} className="mx-auto w-full max-w-[420px] rounded-md bg-white shadow-panel" />
         <p className="mt-3 text-center">
           <a href={`/account/orders/${id}/receipt?download=1`} className="inline-flex h-11 items-center rounded-xl bg-gold px-5 text-sm font-medium text-night hover:bg-gold-bright">Download receipt (PNG)</a>
         </p>
       </div>
+      ) : null}
       <ul className="mt-8 divide-y divide-line/50 rounded-2xl border border-line">
         {sets.map((s, i) => (
           <li key={i} className="p-4">

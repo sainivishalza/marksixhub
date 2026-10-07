@@ -17,7 +17,7 @@ export default async function UserDetailPage({ params, searchParams }: { params:
   if (!user) notFound();
   const [log, orders] = await Promise.all([
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 100', [id]),
-    query<RowDataPacket & { id: number; draw_no: string; tickets: number; points: number; refunded: number; created_at: string }>('SELECT id, draw_no, tickets, points, refunded, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 50', [id]),
+    query<RowDataPacket & { id: number; order_no: string | null; draw_no: string; tickets: number; points: number; refunded: number; created_at: string }>('SELECT id, order_no, draw_no, tickets, points, refunded, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 50', [id]),
   ]);
   return (
     <>
@@ -46,7 +46,7 @@ export default async function UserDetailPage({ params, searchParams }: { params:
       <AdminTable caption="Orders" head={['Order', 'Draw', 'Tickets', 'Points', 'Placed (UTC)', '']} empty={orders.length === 0 ? <p className="p-6 text-sm text-mute">No orders.</p> : null}>
         {orders.map((o) => (
           <tr key={o.id}>
-            <th scope="row" className="px-4 py-3 font-mono">#{o.id}</th>
+            <th scope="row" className="px-4 py-3 font-mono">{o.order_no ?? `#${o.id}`}</th>
             <td className="px-4 py-3 font-mono">{o.draw_no}</td>
             <td className="px-4 py-3 font-mono">{o.tickets}</td>
             <td className="px-4 py-3 font-mono">{o.points}</td>

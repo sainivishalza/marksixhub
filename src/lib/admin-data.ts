@@ -117,13 +117,13 @@ export async function listAllFaqs() {
   return rows.map((r) => ({ id: r.id, question: r.question, answer: r.answer, sortOrder: r.sort_order, active: Boolean(r.active) }));
 }
 
-export type OrderRow = { id: number; email: string; createdAt: string; points: number; refunded: boolean; status: string; tickets: { nums: string; units: number; won: number | null }[] };
+export type OrderRow = { id: number; orderNo: string; email: string; createdAt: string; points: number; refunded: boolean; status: string; tickets: { nums: string; units: number; won: number | null }[] };
 
 /** Everything users placed for one draw: orders (newest first) and how often each number was picked. */
 export async function getDrawOrders(drawNo: string) {
   const [orders, tickets] = await Promise.all([
-    query<RowDataPacket & { id: number; email: string; created_at: string; points: number; refunded: number; status: string }>(
-      'SELECT o.id, u.email, o.created_at, o.points, o.refunded, o.status FROM orders o JOIN users u ON u.id = o.user_id WHERE o.draw_no=? ORDER BY o.id DESC LIMIT 500',
+    query<RowDataPacket & { id: number; email: string; created_at: string; points: number; refunded: number; status: string; order_no: string | null }>(
+      'SELECT o.id, o.order_no, u.email, o.created_at, o.points, o.refunded, o.status FROM orders o JOIN users u ON u.id = o.user_id WHERE o.draw_no=? ORDER BY o.id DESC LIMIT 500',
       [drawNo],
     ),
     query<RowDataPacket & { order_id: number; nums: string; units: number; settled: number; won_points: number }>(
@@ -140,7 +140,7 @@ export async function getDrawOrders(drawNo: string) {
     byOrder.set(t.order_id, list);
   }
   return {
-    orders: orders.map((o): OrderRow => ({ id: o.id, email: o.email, createdAt: String(o.created_at), points: num(o.points), refunded: Boolean(o.refunded), status: o.status, tickets: byOrder.get(o.id) ?? [] })),
+    orders: orders.map((o): OrderRow => ({ id: o.id, orderNo: o.order_no ?? `#${o.id}`, email: o.email, createdAt: String(o.created_at), points: num(o.points), refunded: Boolean(o.refunded), status: o.status, tickets: byOrder.get(o.id) ?? [] })),
     freq,
     ticketCount: tickets.reduce((a, t) => a + num(t.units), 0),
   };

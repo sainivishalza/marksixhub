@@ -12,12 +12,11 @@ const like = (q: string) => `%${q.replace(/[%_\\]/g, '\\$&')}%`;
 export default async function AdminSearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const me = await requireRole('view');
   const q = ((await searchParams).q ?? '').trim().slice(0, 100);
-  const asNumber = /^#?\d{1,9}$/.test(q) ? parseInt(q.replace('#', ''), 10) : 0;
-  const [draws, users, orders] = q
+    const [draws, users, orders] = q
     ? await Promise.all([
         query<RowDataPacket & { id: number; draw_no: string; status: string }>('SELECT id, draw_no, status FROM draws WHERE draw_no LIKE ? ORDER BY draw_date DESC LIMIT 10', [like(q)]),
         can(me.role, 'support') ? query<RowDataPacket & { id: number; email: string }>('SELECT id, email FROM users WHERE email LIKE ? ORDER BY id DESC LIMIT 10', [like(q)]) : Promise.resolve([]),
-        asNumber ? query<RowDataPacket & { id: number; draw_no: string; email: string }>('SELECT o.id, o.draw_no, u.email FROM orders o JOIN users u ON u.id = o.user_id WHERE o.id=?', [asNumber]) : Promise.resolve([]),
+        /^\d{4,20}$/.test(q) ? query<RowDataPacket & { id: number; order_no: string | null; draw_no: string; email: string }>('SELECT o.id, o.order_no, o.draw_no, u.email FROM orders o JOIN users u ON u.id = o.user_id WHERE o.order_no=?', [q]) : Promise.resolve([]),
       ])
     : [[], [], []];
   const none = q && !draws.length && !users.length && !orders.length;
@@ -48,7 +47,7 @@ export default async function AdminSearchPage({ searchParams }: { searchParams: 
       {orders.length ? (
         <Panel title="Orders" className="mb-4">
           <ul className="space-y-2 text-sm">
-            {orders.map((o) => <li key={o.id}>Order #{o.id}, draw {o.draw_no}, {o.email}. <Link href={`/admin/orders?draw=${encodeURIComponent(o.draw_no)}`} className="text-gold-bright underline-offset-4 hover:underline">Open</Link></li>)}
+            {orders.map((o) => <li key={o.id}>Order {o.order_no ?? `#${o.id}`}, draw {o.draw_no}, {o.email}. <Link href={`/admin/orders?draw=${encodeURIComponent(o.draw_no)}`} className="text-gold-bright underline-offset-4 hover:underline">Open</Link></li>)}
           </ul>
         </Panel>
       ) : null}

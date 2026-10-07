@@ -18,7 +18,7 @@ import { isDate, readCurrency, readDraw, type DrawInput } from '@/lib/validate';
 
 const str = (fd: FormData, k: string) => (typeof fd.get(k) === 'string' ? (fd.get(k) as string).trim() : '');
 const int = (fd: FormData, k: string) => parseInt(str(fd, k), 10) || 0;
-const back = (path: string, kind: 'ok' | 'error', msg: string): never => redirect(`${path}?${kind}=${encodeURIComponent(msg)}`);
+const back = (path: string, kind: 'ok' | 'error', msg: string): never => redirect(`${path}${path.includes('?') ? '&' : '?'}${kind}=${encodeURIComponent(msg)}`);
 
 /* ---------- draws ---------- */
 
@@ -282,6 +282,17 @@ export async function grantPointsAction(fd: FormData) {
   back('/admin/users', ok ? 'ok' : 'error', ok ? 'Points updated.' : 'That would take the balance below zero.');
 }
 
+/** The customer-facing number (e.g. 261070001), falling back to the row id. */
+async function orderLabelTx(t: Tx, id: number) {
+  const [r] = await t.query<RowDataPacket & { order_no: string | null }>('SELECT order_no FROM orders WHERE id=?', [id]);
+  return r?.order_no ?? `#${id}`;
+}
+
+async function orderLabel(id: number) {
+  const [r] = await query<RowDataPacket & { order_no: string | null }>('SELECT order_no FROM orders WHERE id=?', [id]);
+  return r?.order_no ?? `#${id}`;
+}
+
 const ordersPath = (drawNo: string) => `/admin/orders?draw=${encodeURIComponent(drawNo)}`;
 
 /** Approves one order: its numbers are now accepted and wait for the result. */
@@ -291,8 +302,9 @@ export async function approveOrderAction(fd: FormData) {
   const drawNo = str(fd, 'draw');
   const res = await exec("UPDATE orders SET status='accepted' WHERE id=? AND status='pending' AND refunded=0", [id]);
   if (!res.affectedRows) back(ordersPath(drawNo), 'error', 'That order is not waiting for approval.');
-  await audit(me.id, 'order.approve', `order ${id}, draw ${drawNo}`);
-  back(ordersPath(drawNo), 'ok', `Order #${id} approved.`);
+  const no = await orderLabel(id);
+  await audit(me.id, 'order.approve', `order ${no}, draw ${drawNo}`);
+  back(ordersPath(drawNo), 'ok', `Order ${no} approved. The buyer can now download the receipt.`);
 }
 
 export async function approveAllAction(fd: FormData) {
@@ -318,12 +330,13 @@ export async function refundOrderAction(fd: FormData) {
     await t.exec('UPDATE orders SET refunded=1, status=? WHERE id=?', [reject ? 'rejected' : 'refunded', id]);
     await t.exec('DELETE FROM saved_sets WHERE order_id=? AND settled=0', [id]);
     await t.exec('UPDATE users SET points = points + ? WHERE id=?', [o.points, o.user_id]);
-    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [o.user_id, o.points, `${reject ? 'Order rejected' : 'Refund'} #${id}`]);
+    await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [o.user_id, o.points, `${reject ? 'Order rejected' : 'Refund'} ${await orderLabelTx(t, id)}`]);
     return true;
   });
   if (!done) back(ordersPath(drawNo), 'error', 'That order cannot be changed (already refunded, or its draw is published).');
-  await audit(me.id, reject ? 'order.reject' : 'order.refund', `order ${id}, draw ${drawNo}`);
-  back(ordersPath(drawNo), 'ok', reject ? `Order #${id} rejected and the points returned.` : `Order #${id} refunded.`);
+  const no = await orderLabel(id);
+  await audit(me.id, reject ? 'order.reject' : 'order.refund', `order ${no}, draw ${drawNo}`);
+  back(ordersPath(drawNo), 'ok', reject ? `Order ${no} rejected and the points returned.` : `Order ${no} refunded.`);
 }
 
 export async function setBlockedAction(fd: FormData) {

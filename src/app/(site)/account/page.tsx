@@ -34,7 +34,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     [Boolean(claim?.nickname), 'On the leaderboard'],
   ].filter(([ok]) => ok).map(([, label]) => label as string);
   const [orders, log] = await Promise.all([
-    query<RowDataPacket & { id: number; draw_no: string; tickets: number; points: number; refunded: number; status: string; created_at: string }>('SELECT id, draw_no, tickets, points, refunded, status, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 30', [user.id]),
+    query<RowDataPacket & { id: number; draw_no: string; tickets: number; points: number; refunded: number; status: string; created_at: string; order_no: string | null }>('SELECT id, draw_no, tickets, points, refunded, status, created_at, order_no FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 30', [user.id]),
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 25', [user.id]),
   ]);
   const [sets, { current }] = await Promise.all([
@@ -102,7 +102,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <section key={o.id} className="rounded-2xl border border-line">
               <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line/50 px-4 py-3 text-sm">
                 <span>
-                  <Link href={`/account/orders/${o.id}`} className="font-mono text-ivory underline-offset-4 hover:underline">Order #{o.id}</Link> <span className="text-mute">for draw {o.draw_no}, {dateLabel(String(o.created_at).slice(0, 10), { weekday: undefined })}. {o.tickets} ticket{o.tickets === 1 ? '' : 's'}, {o.points} points.</span>
+                  <Link href={`/account/orders/${o.id}`} className="font-mono text-ivory underline-offset-4 hover:underline">Order {o.order_no ?? `#${o.id}`}</Link> <span className="text-mute">for draw {o.draw_no}, {dateLabel(String(o.created_at).slice(0, 10), { weekday: undefined })}. {o.tickets} ticket{o.tickets === 1 ? '' : 's'}, {o.points} points.</span>
                   {' '}<OrderStatus status={o.status} settled={mine.length > 0 && mine.every((s) => s.settled)} />
                 </span>
                 {mine.length ? <Link href={`/picker?t=${again}`} className="text-gold-bright underline-offset-4 hover:underline">Play these again</Link> : null}

@@ -92,3 +92,11 @@ test('receipt helpers format like a shop receipt', async () => {
   assert.equal(receiptDate('2026-12-31 20:00:00'), '01JAN27 04:00');
   assert.equal(groupRef('6a0025fc4789020861c0ffff'), '6A002 5FC47 89020 861C0');
 });
+
+test('order numbers follow the draw and restart for each draw', async () => {
+  const { makeOrderNo } = await import('../src/lib/receipt.ts');
+  assert.equal(makeOrderNo('26/107', 1), '261070001');
+  assert.equal(makeOrderNo('26/108', 1), '261080001');
+  assert.equal(makeOrderNo('26/107', 12), '261070012');
+  assert.equal(makeOrderNo('26/107', 10000), '2610710000');
+});
