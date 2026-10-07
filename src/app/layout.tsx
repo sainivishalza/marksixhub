@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono, Playfair_Display } from 'next/font/google';
 import { JsonLd } from '@/components/json-ld';
-import { BASE_URL, absolute } from '@/lib/seo';
+import { BASE_URL, IS_STAGING, absolute } from '@/lib/seo';
 import { getSettings } from '@/lib/settings';
 import './globals.css';
 
@@ -19,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: s.siteName,
     keywords: ['Mark Six results', 'Mark Six number picker', 'HK Mark Six', '六合彩', 'Mark Six jackpot HKD', 'Mark Six quick pick'],
     alternates: { canonical: '/' },
+    robots: IS_STAGING ? { index: false, follow: false } : undefined,
     openGraph: { type: 'website', siteName: s.siteName, title, description: s.siteDescription, url: '/', locale: 'en_HK' },
     twitter: { card: 'summary_large_image' },
   };

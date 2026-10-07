@@ -3,6 +3,9 @@ import type { Metadata } from 'next';
 export const SITE_NAME = 'Mark Six Hub';
 export const BASE_URL = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
+// Any site served from staging.* is a test copy and must stay out of search results.
+export const IS_STAGING = new URL(BASE_URL).hostname.startsWith('staging.');
+
 export const absolute = (path: string) => `${BASE_URL}${path}`;
 
 type PageMeta = { title: string; description: string; path: string; noindex?: boolean };

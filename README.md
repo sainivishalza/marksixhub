@@ -1,21 +1,21 @@
-# Mark Six Hub
+# Mark Six Hub (Next.js)
 
-Information-only Hong Kong Mark Six site: results, prizes, draw calendar, number picker, statistics, user accounts (saved numbers, currency choice) and an admin panel. Node.js + Express + MySQL. No betting, no wallets.
+Information-only Hong Kong Mark Six site: number picker, results, prizes, guide and FAQ, user accounts with saved numbers, and an admin panel. Next.js 16 + MySQL. No betting, no wallets.
 
 ## Run locally
-1. Create a MySQL database and copy `.env.example` to `.env` (leave `NODE_ENV` unset locally).
+1. Copy `.env.example` to `.env.local` and fill in a MySQL database (or leave the `DB_*` values empty to preview public pages with sample data).
 2. `npm install`
-3. `npm run dev` (tables are created automatically; the admin account comes from `ADMIN_EMAIL` / `ADMIN_PASSWORD`).
+3. `npm run dev`
 
-## Test
-    npm test
+Checks: `npm run typecheck`, `npm test`, `npm run build`.
 
-## Deploy on Hostinger (Node.js app, from GitHub)
-1. hPanel > Databases > create a MySQL database and user. Note the name, user and password.
-2. Websites > Add website > Node.js Apps > import from GitHub (`sainivishalza/marksixhub`, branch `main`). Framework: Express. Node 20 or newer. Entry file `server.js`, start command `npm start`.
-3. Set the environment variables from `.env.example` (including a strong `SESSION_SECRET`).
-4. Deploy, open the site, log in at `/login` with the admin email and password, then remove `ADMIN_PASSWORD` from the environment.
-5. Point `marksixhub.com` at the app and enable SSL.
+## Deploy on Hostinger (Node.js app from GitHub)
+- Framework: Next.js. Node 20 or newer. Build `npm run build`, start `npm start`.
+- Environment variables: see `.env.example`. Tables are created automatically on first start (`src/instrumentation.ts`), and the first admin comes from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Remove `ADMIN_PASSWORD` after the first login.
+- A site whose `BASE_URL` host starts with `staging.` is served with noindex and a robots.txt that blocks everything.
 
-## Admin panel (`/admin`)
-Draws & results (add upcoming draws, publish results and prize tiers), events, currencies and rates, site settings (name, description, banner), users.
+## Admin (`/admin`)
+Roles: viewer (look only), editor (draws, events, FAQs, SEO), admin (also users, currencies, settings). Draws can be added one by one or imported from CSV.
+
+## Layout
+`src/app/(site)` public pages, `src/app/admin` admin, `src/actions` server actions (each checks the user's role), `src/lib` logic, `legacy-express/` the old Express app (reference only).
