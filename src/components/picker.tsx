@@ -25,8 +25,17 @@ const MODES: { id: Mode; label: string }[] = [
   { id: 'quick', label: 'Quick pick' },
 ];
 
+function left(iso: string, now: number) {
+  const mins = Math.max(0, Math.floor((new Date(iso).getTime() - now) / 60_000));
+  const d = Math.floor(mins / 1440);
+  const h = Math.floor((mins % 1440) / 60);
+  return d ? `${d}d ${h}h left` : h ? `${h}h ${mins % 60}m left` : `${mins}m left`;
+}
+
 export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }: Props) {
   const [placing, startPlacing] = useTransition();
+  const [receipt, setReceipt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [mode, setMode] = useState<Mode>('single');
   const [qty, setQty] = useState(5);
   const [slip, setSlip] = useState<number[][]>([]);
@@ -118,6 +127,12 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       stopTimers();
     };
   }, [cursor]);
+
+  useEffect(() => {
+    if (!wallet?.closesAt) return;
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, [wallet?.closesAt]);
 
   // A shared link such as /picker?n=3,12,25,31,40,49 preloads the ticket.
   useEffect(() => {
@@ -225,6 +240,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       setStatus(res.message);
       if (res.ok) {
         if (res.points !== undefined) setPoints(res.points);
+        setReceipt(res.orderId ?? null);
         setSlip([]);
         setSel([]);
       }
@@ -443,7 +459,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
         <div className="mt-4 rounded-xl border border-gold/30 p-3">
           <p className="text-sm text-mute">
             Balance <span className="font-mono text-gold-bright">{points}</span> points. Each ticket costs <span className="font-mono">{wallet.cost}</span>.
-            {wallet.drawNo ? ` For draw ${wallet.drawNo}${wallet.closesAt ? `, ordering closes ${new Date(wallet.closesAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}.` : ' Ordering is closed until the next draw is announced.'}
+            {wallet.drawNo ? ` For draw ${wallet.drawNo}${wallet.closesAt ? `, ordering closes ${new Date(wallet.closesAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (${left(wallet.closesAt, now)})` : ''}.` : ' Ordering is closed until the next draw is announced.'}
           </p>
           <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo}>
             <Ticket aria-hidden className="h-4 w-4" />
@@ -459,6 +475,7 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
 
       <p role="status" aria-live="polite" className="mt-3 min-h-[1.25rem] text-sm text-mute">
         {status}
+        {receipt ? <> <Link href={`/account/orders/${receipt}`} className="text-gold-bright underline-offset-4 hover:underline">View receipt</Link></> : null}
       </p>
     </div>
   );

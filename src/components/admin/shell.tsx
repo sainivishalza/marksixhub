@@ -15,7 +15,7 @@ const NAV: { href: string; label: string; icon: typeof Gauge; level: Level }[] =
   { href: '/admin/events', label: 'Events', icon: CalendarDays, level: 'view' },
   { href: '/admin/faqs', label: 'Content', icon: HelpCircle, level: 'content' },
   { href: '/admin/seo', label: 'SEO', icon: FileText, level: 'content' },
-  { href: '/admin/users', label: 'Users', icon: Users, level: 'manage' },
+  { href: '/admin/users', label: 'Users', icon: Users, level: 'support' },
   { href: '/admin/audit', label: 'Audit log', icon: History, level: 'manage' },
   { href: '/admin/logins', label: 'Failed logins', icon: ShieldAlert, level: 'manage' },
   { href: '/admin/points-check', label: 'Points check', icon: Scale, level: 'manage' },
@@ -66,13 +66,13 @@ export function AdminShell({ user, children }: { user: { email: string; role: Ro
 
       <div className="min-w-0 flex-1">
         <header className="flex items-center gap-3 border-b border-line/60 bg-panel/60 px-4 py-3">
-          <form action="/admin/draws" className="relative max-w-sm flex-1">
+          <form action="/admin/search" className="relative max-w-sm flex-1">
             <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mute" />
             <input
               name="q"
               type="search"
-              placeholder="Find a draw, e.g. 26/081"
-              aria-label="Search draws"
+              placeholder="Search draws, users, orders"
+              aria-label="Search the admin area"
               className="h-10 w-full rounded-xl border border-line bg-night pl-9 pr-3 text-sm text-ivory placeholder:text-mute/60"
             />
           </form>

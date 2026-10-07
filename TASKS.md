@@ -33,6 +33,8 @@ Done in part 4 (not yet run against real MySQL):
 - [x] Favourite numbers (picker), win notices (picker + account, dismiss), dashboard cards (orders today, points held/won), orders CSV export, suspend/restore users (blocked users are signed out and cannot log in). nextjs branch; not tested on real MySQL.
 - [x] Leaderboard (opt-in nickname), daily streak bonus, draw checklist, give-everyone points, confirm tick for making admins. Still open: forgot password (needs an email service). nextjs branch; not tested on real MySQL.
 - [x] Login lockout (5 fails/15 min per account) + admin Failed logins; sign-up bonus limited to 3 accounts per address per day (hashed address); admin Points check (balance vs history); undo payout (unpublish or correcting a result reverses and re-pays); public /statistics page (hot, cold, overdue). nextjs branch; not tested on real MySQL.
+- [x] Two-step login (authenticator app, optional per user), support role (look up users, refund orders), admin search, admin alerts, full JSON backup, order receipt page + closes-in countdown, number checker /check, badges, payout preview before publishing, failed-login cleanup (30 days). nextjs branch; not tested on real MySQL.
+- [ ] Still open: forgot password and result emails (need an email service), scheduled auto-publish of draws (needs a job runner; risky to pay out unattended), service-worker/offline PWA.
 
 Todo (in order):
 1. Deploy branch `nextjs` to a STAGING site on Hostinger (staging.marksixhub.com, its own new database, BASE_URL=https://staging.marksixhub.com). Walk through: register, login, admin draw add/publish, CSV import, FAQ edit, settings, maintenance. Fix any SQL errors from the runtime logs.

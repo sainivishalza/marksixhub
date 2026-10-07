@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Panel, PageHeader, StatCard } from '@/components/admin/ui';
 import { PicksChart } from '@/components/admin/picks-chart';
 import { buttonVariants } from '@/components/ui/button';
-import { getDashboard } from '@/lib/admin-data';
+import { getAlerts, getDashboard } from '@/lib/admin-data';
 import { requireRole } from '@/lib/auth';
 import { can } from '@/lib/perms';
 
@@ -10,7 +10,7 @@ export const metadata = { title: 'Dashboard' };
 
 export default async function DashboardPage() {
   const user = await requireRole('view');
-  const d = await getDashboard();
+  const [d, alerts] = await Promise.all([getDashboard(), can(user.role, 'manage') ? getAlerts() : Promise.resolve([])]);
   return (
     <>
       <PageHeader title="Dashboard" description="A quick look at the site today.">
@@ -18,6 +18,13 @@ export default async function DashboardPage() {
           <Link href="/admin/draws/new" className={buttonVariants({ size: 'md' })}>Add draw or result</Link>
         ) : null}
       </PageHeader>
+
+      {alerts.length ? (
+        <section aria-label="Alerts" className="mb-6 rounded-2xl border border-miss/40 bg-miss/10 p-4">
+          <h2 className="mb-2 text-lg text-miss">Needs a look</h2>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-ivory">{alerts.map((a) => <li key={a}>{a}</li>)}</ul>
+        </section>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Registered users" value={d.users} />

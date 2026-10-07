@@ -2,6 +2,8 @@ import 'server-only';
 import type { RowDataPacket } from 'mysql2/promise';
 import { toDraw, type DrawRow } from './data';
 import { query } from './db';
+import { combinations, evaluate, parseNumbers } from './mark6';
+import { getSettings } from './settings';
 import type { Draw, EventItem, Prize } from './types';
 import type { Role } from './perms';
 
@@ -156,4 +158,42 @@ export async function getDrawChecklist(drawNo: string) {
     query<RowDataPacket & { waiting: number }>('SELECT COUNT(*) AS waiting FROM saved_sets WHERE draw_no=? AND settled=0', [drawNo]),
   ]);
   return { orders: num(o.orders), tickets: num(o.tickets), points: num(o.points), waiting: num(t.waiting) };
+}
+
+/** Things worth a look: unusual points activity, refunds, sign-up bursts, failed logins, negative balances. */
+export async function getAlerts(): Promise<string[]> {
+  const [grants, refunds, bursts, fails, negative] = await Promise.all([
+    query<RowDataPacket & { action: string; detail: string }>("SELECT action, detail FROM audit_log WHERE action IN ('points.adjust','points.grant_all') AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY ORDER BY id DESC LIMIT 5"),
+    query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM audit_log WHERE action='order.refund' AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY"),
+    query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM users WHERE signup_ip IS NOT NULL AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY GROUP BY signup_ip HAVING n >= 4'),
+    query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM login_fails WHERE created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY GROUP BY email HAVING n >= 3'),
+    query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM users WHERE points < 0'),
+  ]);
+  const out: string[] = [];
+  for (const g of grants) out.push(`Points ${g.action === 'points.grant_all' ? 'given to everyone' : 'adjusted'} in the last 24 hours: ${g.detail}`);
+  if (num(refunds[0].n) >= 5) out.push(`${num(refunds[0].n)} orders refunded in the last 24 hours.`);
+  if (bursts.length) out.push(`${bursts.length} address${bursts.length === 1 ? '' : 'es'} created 4 or more accounts in the last 24 hours.`);
+  if (fails.length) out.push(`${fails.length} account${fails.length === 1 ? '' : 's'} with 3 or more failed logins in the last 24 hours. See Failed logins.`);
+  if (num(negative[0].n)) out.push(`${num(negative[0].n)} user${num(negative[0].n) === 1 ? ' has' : 's have'} a negative points balance (after a reversed payout).`);
+  return out;
+}
+
+/** What publishing a result would pay, without paying anything. Counts every unsettled ticket for the draw. */
+export async function previewPayout(drawNo: string, numbers: number[], extra: number) {
+  const { prizePoints } = await getSettings();
+  const rows = await query<RowDataPacket & { nums: string }>('SELECT nums FROM saved_sets WHERE draw_no=? AND settled=0', [drawNo]);
+  const byDivision = Array<number>(7).fill(0);
+  let totalPoints = 0;
+  let tickets = 0;
+  for (const r of rows) {
+    for (const combo of combinations(parseNumbers(r.nums))) {
+      tickets += 1;
+      const { division } = evaluate(combo, numbers, extra);
+      if (division) {
+        byDivision[division - 1] += 1;
+        totalPoints += prizePoints[division - 1] ?? 0;
+      }
+    }
+  }
+  return { tickets, winningTickets: byDivision.reduce((a, b) => a + b, 0), totalPoints, byDivision };
 }

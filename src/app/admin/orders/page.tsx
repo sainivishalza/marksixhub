@@ -86,7 +86,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   </ul>
                 </td>
                 <td className="px-4 py-3">
-                  {can(me.role, 'manage') && current.status === 'upcoming' && !o.refunded ? (
+                  {can(me.role, 'support') && current.status === 'upcoming' && !o.refunded ? (
                     <form action={refundOrderAction}>
                       <input type="hidden" name="id" value={o.id} />
                       <input type="hidden" name="draw" value={current.drawNo} />

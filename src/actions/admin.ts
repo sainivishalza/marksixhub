@@ -272,7 +272,7 @@ export async function grantPointsAction(fd: FormData) {
 
 /** Cancels an order for a draw that has not been published yet and returns its points. */
 export async function refundOrderAction(fd: FormData) {
-  const me = await requireRole('manage');
+  const me = await requireRole('support');
   const id = int(fd, 'id');
   const drawNo = str(fd, 'draw');
   const path = `/admin/orders?draw=${encodeURIComponent(drawNo)}`;

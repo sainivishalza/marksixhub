@@ -10,7 +10,7 @@ const TABLES = [
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(190) NOT NULL UNIQUE,
     pass_hash VARCHAR(255) NOT NULL,
-    role ENUM('user','viewer','editor','admin') NOT NULL DEFAULT 'user',
+    role ENUM('user','viewer','support','editor','admin') NOT NULL DEFAULT 'user',
     currency CHAR(3) NOT NULL DEFAULT 'HKD',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_login_at DATETIME NULL
@@ -151,7 +151,7 @@ export async function migrate() {
   for (const sql of TABLES) await exec(sql);
 
   // Older databases from the Express app only knew 'user' and 'admin'.
-  await exec("ALTER TABLE users MODIFY role ENUM('user','viewer','editor','admin') NOT NULL DEFAULT 'user'");
+  await exec("ALTER TABLE users MODIFY role ENUM('user','viewer','support','editor','admin') NOT NULL DEFAULT 'user'");
   if (!(await hasColumn('users', 'last_login_at'))) await exec('ALTER TABLE users ADD COLUMN last_login_at DATETIME NULL');
 
   // Extra details for an upcoming draw, as the HKJC lists them. All optional.
@@ -188,6 +188,8 @@ export async function migrate() {
   if (!(await hasColumn('users', 'nickname'))) await exec('ALTER TABLE users ADD COLUMN nickname VARCHAR(20) NULL, ADD UNIQUE KEY uq_nickname (nickname)');
 
   if (!(await hasColumn('users', 'signup_ip'))) await exec('ALTER TABLE users ADD COLUMN signup_ip CHAR(32) NULL, ADD KEY idx_signup_ip (signup_ip)');
+
+  if (!(await hasColumn('users', 'totp_secret'))) await exec('ALTER TABLE users ADD COLUMN totp_secret VARCHAR(40) NULL, ADD COLUMN totp_on TINYINT(1) NOT NULL DEFAULT 0');
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);

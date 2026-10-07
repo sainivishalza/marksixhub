@@ -67,6 +67,16 @@ test('numberStats counts draws and gaps, newest first', async () => {
   assert.equal(s[48].gap, 3);
 });
 
+test('totp matches the RFC 6238 test vector and rejects wrong codes', async () => {
+  const { totpAt, verifyTotp, newTotpSecret } = await import('../src/lib/totp.ts');
+  const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+  assert.equal(totpAt(secret, Math.floor(59 / 30)), '287082');
+  assert.ok(verifyTotp(secret, '287 082', 59_000));
+  assert.ok(!verifyTotp(secret, '000000', 59_000));
+  assert.ok(!verifyTotp(secret, '287082', 59_000 + 120_000));
+  assert.match(newTotpSecret(), /^[A-Z2-7]{32}$/);
+});
+
 test('multiple entries: combination counts and units', async () => {
   const { combinations, ticketUnits } = await import('../src/lib/mark6.ts');
   assert.equal(ticketUnits(6), 1);

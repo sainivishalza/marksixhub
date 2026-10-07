@@ -20,6 +20,10 @@ export function LoginForm({ next }: { next: string }) {
         Password
         <input className={input} type="password" name="password" required autoComplete="current-password" maxLength={200} />
       </label>
+      <label className="block text-sm text-mute">
+        Authentication code <span className="text-mute/70">(only if you turned on two-step login)</span>
+        <input className={input} type="text" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={8} />
+      </label>
       <FormMessage error={state.error} />
       <SubmitButton size="lg" pendingText="Logging in..." className="w-full">Log in</SubmitButton>
     </form>

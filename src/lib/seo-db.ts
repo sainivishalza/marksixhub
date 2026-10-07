@@ -37,6 +37,12 @@ export const SEO_DEFAULTS: Record<string, Seo & { label: string }> = {
     title: 'Mark Six Number Statistics: Hot, Cold and Overdue Numbers',
     description: 'How often each Mark Six number from 1 to 49 has been drawn, the most and least drawn numbers and how long since each last appeared.',
   },
+  '/check': {
+    label: 'Number checker',
+    path: '/check',
+    title: 'Mark Six Number Checker: Did Your Numbers Ever Win?',
+    description: 'Type six numbers and see every past Mark Six draw where they won a prize, with the matching numbers for each draw.',
+  },
   '/faq': {
     label: 'FAQ',
     path: '/faq',

@@ -3,13 +3,14 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { setBlockedAction } from '@/actions/admin';
 import { AdminTable, Notice, PageHeader, Panel } from '@/components/admin/ui';
 import { requireRole } from '@/lib/auth';
+import { can } from '@/lib/perms';
 import { Button } from '@/components/ui/button';
 import { query } from '@/lib/db';
 
 export const metadata = { title: 'User' };
 
 export default async function UserDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
-  const me = await requireRole('manage');
+  const me = await requireRole('support');
   const { ok, error } = await searchParams;
   const id = parseInt((await params).id, 10);
   const [user] = Number.isInteger(id) ? await query<RowDataPacket & { email: string; points: number; blocked: number; created_at: string; last_login_at: string | null }>('SELECT email, points, blocked, created_at, last_login_at FROM users WHERE id=?', [id]) : [];
@@ -25,7 +26,7 @@ export default async function UserDetailPage({ params, searchParams }: { params:
       <Panel className="mb-6">
         <p className="text-sm text-mute">Points balance</p>
         <p className="font-mono text-3xl tabular-nums text-gold-bright">{Number(user.points)}</p>
-        {id !== me.id ? (
+        {id !== me.id && can(me.role, 'manage') ? (
           <form action={setBlockedAction} className="mt-4 flex items-center gap-3">
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="blocked" value={user.blocked ? '0' : '1'} />

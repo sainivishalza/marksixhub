@@ -7,7 +7,8 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { clientIp, createSession, destroySession, getUser, ipHash, requireUser, touchLogin } from '@/lib/auth';
 import { dbConfigured, exec, query, tx } from '@/lib/db';
 import { isBall, MAX_MULTI, sortAsc, ticketUnits } from '@/lib/mark6';
-import { can } from '@/lib/perms';
+import { can, type Role } from '@/lib/perms';
+import { newTotpSecret, verifyTotp } from '@/lib/totp';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
 import { addPoints, openDraw } from '@/lib/points';
 import { getSettings } from '@/lib/settings';
@@ -16,13 +17,14 @@ import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
 
 /** `email` is echoed back after a failed attempt so the form can keep what was typed. */
 export type FormState = { error?: string; ok?: string; email?: string };
+const CODE_NEEDED = 'Enter the 6-digit code from your authenticator app, together with your password.';
 
 const MAX_SETS = 50;
 const text = (fd: FormData, k: string) => (typeof fd.get(k) === 'string' ? (fd.get(k) as string) : '');
 const tooMany = (sec: number) => ({ error: `Too many attempts. Try again in ${Math.ceil(sec / 60)} minute${sec > 60 ? 's' : ''}.` });
 const NO_DB: FormState = { error: 'The database is not connected yet, so accounts are unavailable.' };
 
-type UserRow = RowDataPacket & { id: number; pass_hash: string; role: 'user' | 'viewer' | 'editor' | 'admin'; blocked?: number };
+type UserRow = RowDataPacket & { id: number; pass_hash: string; role: Role; blocked?: number; totp_on?: number; totp_secret?: string | null };
 
 export async function loginAction(_prev: FormState, fd: FormData): Promise<FormState> {
   if (!dbConfigured) return NO_DB;
@@ -34,13 +36,22 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
   // Lock the account (any email, so this reveals nothing) after 5 failures in 15 minutes.
   const [fails] = await query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM login_fails WHERE email=? AND created_at > UTC_TIMESTAMP() - INTERVAL 15 MINUTE", [email]);
   if (Number(fails.n) >= 5) return { error: 'Too many failed attempts for this account. Try again in 15 minutes.', email };
-  const [user] = await query<UserRow>('SELECT id, pass_hash, role, blocked FROM users WHERE email=?', [email]);
+  const [user] = await query<UserRow>('SELECT id, pass_hash, role, blocked, totp_on, totp_secret FROM users WHERE email=?', [email]);
   const ok = user ? await verifyPassword(password, user.pass_hash) : (await verifyPassword(password, DUMMY_HASH), false);
   if (!ok || !user) {
     await exec('INSERT INTO login_fails (email, ip) VALUES (?,?)', [email, (await clientIp()).slice(0, 64)]);
+    await exec('DELETE FROM login_fails WHERE created_at < UTC_TIMESTAMP() - INTERVAL 30 DAY');
     return { error: 'Wrong email or password.', email };
   }
   if (user.blocked) return { error: 'This account has been suspended.', email };
+  if (user.totp_on && user.totp_secret) {
+    const code = text(fd, 'code');
+    if (!code.trim()) return { error: CODE_NEEDED, email };
+    if (!verifyTotp(user.totp_secret, code)) {
+      await exec('INSERT INTO login_fails (email, ip) VALUES (?,?)', [email, (await clientIp()).slice(0, 64)]);
+      return { error: 'That code is wrong or expired. Enter the current code.', email };
+    }
+  }
 
   await exec('DELETE FROM login_fails WHERE email=?', [email]);
   await createSession(user.id, user.pass_hash);
@@ -88,7 +99,7 @@ export async function logoutAction() {
 const MAX_PER_ORDER = 20;
 
 /** Places one order of tickets for the next draw. A ticket is 6 numbers (single) or 7 to 12 (multiple, worth C(n,6) tickets). */
-export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolean; message: string; points?: number }> {
+export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolean; message: string; points?: number; orderId?: number }> {
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in to place tickets.' };
   const tickets = (Array.isArray(sets) ? sets : []).slice(0, MAX_PER_ORDER).map((s) => [...new Set(Array.isArray(s) ? s.map(Number) : [])]);
@@ -115,11 +126,11 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
       await t.exec('INSERT INTO saved_sets (user_id, nums, draw_no, order_id, units) VALUES (?,?,?,?,?)', [user.id, sortAsc(tk).join(','), next.draw_no, orderId, units[i]]);
     }
     const [u] = await t.query<RowDataPacket & { points: number }>('SELECT points FROM users WHERE id=?', [user.id]);
-    return Number(u.points);
+    return { points: Number(u.points), orderId };
   });
   if (left === null) return { ok: false, message: `You need ${cost} points for ${label}. Claim your free daily points in My account.` };
   revalidatePath('/account');
-  return { ok: true, points: left, message: `Order placed: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left} left.` };
+  return { ok: true, points: left.points, orderId: left.orderId, message: `Order placed: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left.` };
 }
 
 export async function claimDailyAction() {
@@ -207,4 +218,30 @@ export async function dismissWinsAction() {
   const user = await requireUser();
   await exec('UPDATE saved_sets SET notified=1 WHERE user_id=? AND settled=1', [user.id]);
   revalidatePath('/account');
+}
+
+/* ---------- two-step login (authenticator app) ---------- */
+
+export async function beginTotpAction() {
+  const user = await requireUser();
+  await exec('UPDATE users SET totp_secret=?, totp_on=0 WHERE id=? AND totp_on=0', [newTotpSecret(), user.id]);
+  redirect('/account#two-step');
+}
+
+export async function confirmTotpAction(fd: FormData) {
+  const user = await requireUser();
+  const [u] = await query<RowDataPacket & { totp_secret: string | null }>('SELECT totp_secret FROM users WHERE id=?', [user.id]);
+  const ok = u?.totp_secret && verifyTotp(u.totp_secret, text(fd, 'code'));
+  if (ok) await exec('UPDATE users SET totp_on=1 WHERE id=?', [user.id]);
+  redirect(`/account?two=${ok ? 'on' : 'bad'}#two-step`);
+}
+
+export async function disableTotpAction(fd: FormData) {
+  const user = await requireUser();
+  const limit = rateLimit(`totp-off:${user.id}`, 5, 15 * 60_000);
+  if (!limit.ok) redirect('/account?two=bad#two-step');
+  const [u] = await query<UserRow>('SELECT id, pass_hash, role, totp_secret FROM users WHERE id=?', [user.id]);
+  const ok = u?.totp_secret && (await verifyPassword(text(fd, 'password').slice(0, 200), u.pass_hash)) && verifyTotp(u.totp_secret, text(fd, 'code'));
+  if (ok) await exec('UPDATE users SET totp_on=0, totp_secret=NULL WHERE id=?', [user.id]);
+  redirect(`/account?two=${ok ? 'off' : 'bad'}#two-step`);
 }

@@ -56,6 +56,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </label>
         </Panel>
 
+        <Panel title="Backup">
+          <p className="mb-3 text-sm text-mute">Downloads users (without passwords), orders, tickets, points history, draws, settings and the audit log as one JSON file. Keep it somewhere private. Also keep your host's own database backups switched on.</p>
+          <a href="/admin/export" className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm text-ivory hover:border-gold">Download full backup</a>
+        </Panel>
+
         <Button type="submit" size="lg">Save settings</Button>
       </form>
     </>

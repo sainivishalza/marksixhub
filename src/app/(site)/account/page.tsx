@@ -4,7 +4,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { BallRow } from '@/components/ball';
 import { ChangePasswordForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
-import { claimDailyAction, deleteSetAction, dismissWinsAction, saveNicknameAction } from '@/actions/account';
+import { beginTotpAction, claimDailyAction, confirmTotpAction, deleteSetAction, disableTotpAction, dismissWinsAction, saveNicknameAction } from '@/actions/account';
 import { requireUser } from '@/lib/auth';
 import { getCurrentCurrency } from '@/lib/data';
 import { query } from '@/lib/db';
@@ -15,15 +15,24 @@ import { DIVISION_LABEL, evaluate, parseNumbers } from '@/lib/mark6';
 
 export const metadata: Metadata = { title: 'My account', robots: { index: false, follow: false } };
 
-export default async function AccountPage({ searchParams }: { searchParams: Promise<{ nick?: string }> }) {
-  const { nick } = await searchParams;
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ nick?: string; two?: string }> }) {
+  const { nick, two } = await searchParams;
   const user = await requireUser('/account');
   const [points, settings, [claim]] = await Promise.all([
     getPoints(user.id),
     getSettings(),
-    query<RowDataPacket & { done: number; streak: number; nickname: string | null }>('SELECT (last_claim = UTC_DATE()) AS done, streak, nickname FROM users WHERE id=?', [user.id]),
+    query<RowDataPacket & { done: number; streak: number; nickname: string | null; totp_on: number; totp_secret: string | null }>('SELECT (last_claim = UTC_DATE()) AS done, streak, nickname, totp_on, totp_secret FROM users WHERE id=?', [user.id]),
   ]);
   const [win] = await query<RowDataPacket & { n: number | null; draws: string | null }>("SELECT SUM(won_points) AS n, GROUP_CONCAT(DISTINCT draw_no) AS draws FROM saved_sets WHERE user_id=? AND settled=1 AND notified=0 AND won_points>0", [user.id]);
+  const [stat] = await query<RowDataPacket & { orders: number; won: number | null }>('SELECT (SELECT COUNT(*) FROM orders WHERE user_id=? AND refunded=0) AS orders, (SELECT SUM(won_points) FROM saved_sets WHERE user_id=? AND settled=1) AS won', [user.id, user.id]);
+  const badges = [
+    [Number(stat.orders) >= 1, 'First order'],
+    [Number(stat.orders) >= 10, '10 orders'],
+    [Number(claim?.streak) >= 7, '7-day streak'],
+    [Number(stat.won) > 0, 'First win'],
+    [Number(stat.won) >= 1000, '1,000 points won'],
+    [Boolean(claim?.nickname), 'On the leaderboard'],
+  ].filter(([ok]) => ok).map(([, label]) => label as string);
   const [orders, log] = await Promise.all([
     query<RowDataPacket & { id: number; draw_no: string; tickets: number; points: number; refunded: number; created_at: string }>('SELECT id, draw_no, tickets, points, refunded, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 30', [user.id]),
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 25', [user.id]),
@@ -55,6 +64,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </form>
       </section>
 
+      {badges.length ? (
+        <ul className="mt-4 flex flex-wrap gap-2" aria-label="Badges">
+          {badges.map((b) => <li key={b} className="rounded-full border border-gold/40 px-3 py-1 text-xs text-gold-bright">{b}</li>)}
+        </ul>
+      ) : null}
+
       {Number(win?.n) ? (
         <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-win/40 bg-win/10 p-4">
           <p className="text-win">You won {Number(win.n)} points in draw {win.draws}.</p>
@@ -76,7 +91,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <section key={o.id} className="rounded-2xl border border-line">
               <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line/50 px-4 py-3 text-sm">
                 <span>
-                  <span className="font-mono text-ivory">Order #{o.id}</span> <span className="text-mute">for draw {o.draw_no}, {dateLabel(String(o.created_at).slice(0, 10), { weekday: undefined })}. {o.tickets} ticket{o.tickets === 1 ? '' : 's'}, {o.points} points{o.refunded ? ' (refunded)' : ''}.</span>
+                  <Link href={`/account/orders/${o.id}`} className="font-mono text-ivory underline-offset-4 hover:underline">Order #{o.id}</Link> <span className="text-mute">for draw {o.draw_no}, {dateLabel(String(o.created_at).slice(0, 10), { weekday: undefined })}. {o.tickets} ticket{o.tickets === 1 ? '' : 's'}, {o.points} points{o.refunded ? ' (refunded)' : ''}.</span>
                 </span>
                 {mine.length ? <Link href={`/picker?t=${again}`} className="text-gold-bright underline-offset-4 hover:underline">Play these again</Link> : null}
               </header>
@@ -117,6 +132,31 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <Button type="submit" variant="outline">Save</Button>
       </form>
       {nick ? <p role="status" className="mt-2 text-sm text-mute">{nick}</p> : null}
+
+      <h2 id="two-step" className="mb-2 mt-12 text-2xl">Two-step login</h2>
+      {two === 'on' ? <p role="status" className="mb-2 text-sm text-win">Two-step login is on.</p> : null}
+      {two === 'off' ? <p role="status" className="mb-2 text-sm text-mute">Two-step login is off.</p> : null}
+      {two === 'bad' ? <p role="alert" className="mb-2 text-sm text-miss">That did not work. Check the code (and password) and try again.</p> : null}
+      {Number(claim?.totp_on) ? (
+        <form action={disableTotpAction} className="max-w-sm space-y-3">
+          <p className="text-sm text-mute">On. Logging in needs a code from your authenticator app. To turn it off, enter your password and a current code.</p>
+          <input name="password" type="password" required placeholder="Password" aria-label="Password" autoComplete="current-password" className="h-10 w-full rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
+          <input name="code" inputMode="numeric" required placeholder="6-digit code" aria-label="Code" autoComplete="one-time-code" className="h-10 w-full rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
+          <Button type="submit" variant="outline">Turn off</Button>
+        </form>
+      ) : claim?.totp_secret ? (
+        <form action={confirmTotpAction} className="max-w-md space-y-3">
+          <p className="text-sm text-mute">In an authenticator app (Google Authenticator, Microsoft Authenticator, Authy), add an account by key and enter this secret, then type the 6-digit code it shows.</p>
+          <p className="break-all rounded-lg border border-line bg-night px-3 py-2 font-mono text-sm tracking-wider text-ivory">{claim.totp_secret.match(/.{1,4}/g)?.join(' ')}</p>
+          <input name="code" inputMode="numeric" required placeholder="6-digit code" aria-label="Code" autoComplete="one-time-code" className="h-10 w-full max-w-xs rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
+          <Button type="submit">Turn on</Button>
+        </form>
+      ) : (
+        <form action={beginTotpAction}>
+          <p className="mb-3 max-w-[60ch] text-sm text-mute">Adds a code from your phone to every login. Recommended for admin and staff accounts.</p>
+          <Button type="submit" variant="outline">Set up two-step login</Button>
+        </form>
+      )}
 
       <h2 className="mb-4 mt-12 text-2xl">Change password</h2>
       <ChangePasswordForm />
