@@ -177,6 +177,9 @@ export async function migrate() {
     await exec('UPDATE saved_sets SET notified=1'); // only wins from now on are announced
   }
 
+  if (!(await hasColumn('users', 'streak'))) await exec('ALTER TABLE users ADD COLUMN streak INT NOT NULL DEFAULT 0');
+  if (!(await hasColumn('users', 'nickname'))) await exec('ALTER TABLE users ADD COLUMN nickname VARCHAR(20) NULL, ADD UNIQUE KEY uq_nickname (nickname)');
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 

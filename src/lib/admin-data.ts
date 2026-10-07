@@ -148,3 +148,12 @@ export async function listDrawNos(): Promise<{ drawNo: string; status: string; n
   );
   return rows.map((r) => ({ drawNo: r.draw_no, status: r.status, nums: r.nums, extra: r.extra }));
 }
+
+/** Where a draw stands, for the checklist on its edit page. */
+export async function getDrawChecklist(drawNo: string) {
+  const [[o], [t]] = await Promise.all([
+    query<RowDataPacket & { orders: number; tickets: number | null; points: number | null }>('SELECT COUNT(*) AS orders, SUM(tickets) AS tickets, SUM(points) AS points FROM orders WHERE draw_no=? AND refunded=0', [drawNo]),
+    query<RowDataPacket & { waiting: number }>('SELECT COUNT(*) AS waiting FROM saved_sets WHERE draw_no=? AND settled=0', [drawNo]),
+  ]);
+  return { orders: num(o.orders), tickets: num(o.tickets), points: num(o.points), waiting: num(t.waiting) };
+}

@@ -113,10 +113,31 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
 export async function claimDailyAction() {
   const user = await requireUser();
   const { dailyPoints } = await getSettings();
-  // One claim per UTC day; the WHERE makes a double click harmless.
-  const res = await exec('UPDATE users SET last_claim=UTC_DATE() WHERE id=? AND (last_claim IS NULL OR last_claim < UTC_DATE())', [user.id]);
-  if (res.affectedRows) await addPoints(user.id, dailyPoints, 'Daily free points');
+  // One claim per UTC day; the WHERE makes a double click harmless. MySQL assigns left to right, so `streak` sees the old last_claim.
+  const res = await exec(
+    'UPDATE users SET streak = IF(last_claim = UTC_DATE() - INTERVAL 1 DAY, streak + 1, 1), last_claim = UTC_DATE() WHERE id=? AND (last_claim IS NULL OR last_claim < UTC_DATE())',
+    [user.id],
+  );
+  if (res.affectedRows) {
+    const [u] = await query<RowDataPacket & { streak: number }>('SELECT streak FROM users WHERE id=?', [user.id]);
+    const bonus = dailyPoints + 10 * (Math.min(Number(u.streak), 7) - 1); // +10 per day of streak, up to day 7
+    await addPoints(user.id, bonus, `Daily free points (day ${u.streak} streak)`);
+  }
   revalidatePath('/account');
+}
+
+export async function saveNicknameAction(fd: FormData) {
+  const user = await requireUser();
+  const nick = text(fd, 'nickname').trim();
+  const bad = (msg: string): never => redirect(`/account?nick=${encodeURIComponent(msg)}`);
+  if (nick && !/^[A-Za-z0-9_-]{3,20}$/.test(nick)) bad('Use 3 to 20 letters, numbers, - or _.');
+  try {
+    await exec('UPDATE users SET nickname=? WHERE id=?', [nick || null, user.id]);
+  } catch (err) {
+    if ((err as { code?: string }).code === 'ER_DUP_ENTRY') bad('That nickname is taken.');
+    throw err;
+  }
+  redirect(`/account?nick=${encodeURIComponent(nick ? 'Saved. You are on the leaderboard.' : 'Removed. You are off the leaderboard.')}`);
 }
 
 export async function deleteSetAction(fd: FormData) {

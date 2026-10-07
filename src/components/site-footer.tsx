@@ -6,6 +6,7 @@ const LINKS = [
   { href: '/results', label: 'Results' },
   { href: '/guide', label: 'How to play' },
   { href: '/faq', label: 'FAQ' },
+  { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/sitemap.xml', label: 'Sitemap' },
 ];
 

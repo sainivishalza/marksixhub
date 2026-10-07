@@ -4,7 +4,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { BallRow } from '@/components/ball';
 import { ChangePasswordForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
-import { claimDailyAction, deleteSetAction, dismissWinsAction } from '@/actions/account';
+import { claimDailyAction, deleteSetAction, dismissWinsAction, saveNicknameAction } from '@/actions/account';
 import { requireUser } from '@/lib/auth';
 import { getCurrentCurrency } from '@/lib/data';
 import { query } from '@/lib/db';
@@ -15,12 +15,13 @@ import { DIVISION_LABEL, evaluate, parseNumbers } from '@/lib/mark6';
 
 export const metadata: Metadata = { title: 'My account', robots: { index: false, follow: false } };
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ nick?: string }> }) {
+  const { nick } = await searchParams;
   const user = await requireUser('/account');
   const [points, settings, [claim]] = await Promise.all([
     getPoints(user.id),
     getSettings(),
-    query<RowDataPacket & { done: number }>('SELECT (last_claim = UTC_DATE()) AS done FROM users WHERE id=?', [user.id]),
+    query<RowDataPacket & { done: number; streak: number; nickname: string | null }>('SELECT (last_claim = UTC_DATE()) AS done, streak, nickname FROM users WHERE id=?', [user.id]),
   ]);
   const [win] = await query<RowDataPacket & { n: number | null; draws: string | null }>("SELECT SUM(won_points) AS n, GROUP_CONCAT(DISTINCT draw_no) AS draws FROM saved_sets WHERE user_id=? AND settled=1 AND notified=0 AND won_points>0", [user.id]);
   const [orders, log] = await Promise.all([
@@ -46,6 +47,7 @@ export default async function AccountPage() {
         <div>
           <p className="text-sm text-mute">Points balance</p>
           <p className="font-mono text-3xl tabular-nums text-gold-bright">{points}</p>
+          {Number(claim?.streak) > 0 ? <p className="mt-1 text-sm text-mute">Daily streak: {Number(claim.streak)} day{Number(claim.streak) === 1 ? '' : 's'}. Each extra day adds 10 points, up to day 7.</p> : null}
           <p className="mt-1 text-xs text-mute">Free play points. They are not money, cannot be bought and cannot be cashed out. A ticket costs {settings.ticketPoints} points.</p>
         </div>
         <form action={claimDailyAction}>
@@ -107,6 +109,14 @@ export default async function AccountPage() {
           </ul>
         )}
       </details>
+
+      <h2 className="mb-2 mt-12 text-2xl">Leaderboard nickname</h2>
+      <p className="mb-3 text-sm text-mute">Optional. A nickname puts your points balance on the <Link href="/leaderboard" className="text-gold-bright underline-offset-4 hover:underline">leaderboard</Link>. Your email is never shown. Leave it empty to stay off.</p>
+      <form action={saveNicknameAction} className="flex max-w-sm gap-2">
+        <input name="nickname" defaultValue={claim?.nickname ?? ''} maxLength={20} aria-label="Nickname" className="h-10 w-full rounded-lg border border-line bg-night px-3 text-sm text-ivory" />
+        <Button type="submit" variant="outline">Save</Button>
+      </form>
+      {nick ? <p role="status" className="mt-2 text-sm text-mute">{nick}</p> : null}
 
       <h2 className="mb-4 mt-12 text-2xl">Change password</h2>
       <ChangePasswordForm />

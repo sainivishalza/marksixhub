@@ -229,6 +229,7 @@ export async function setRoleAction(fd: FormData) {
   const path = `/admin/users`;
   if (!isRole(role)) back(path, 'error', 'Unknown role.');
   if (id === me.id) back(path, 'error', 'You cannot change your own role. Ask another admin.');
+  if (role === 'admin' && !fd.get('confirm')) back(path, 'error', 'Tick "Confirm" to make someone an admin. Admins can manage users, points and settings.');
   await exec('UPDATE users SET role=? WHERE id=?', [role, id]);
   await audit(me.id, 'user.role', `user ${id} -> ${role}`);
   back(path, 'ok', 'Role updated.');
@@ -295,4 +296,18 @@ export async function setBlockedAction(fd: FormData) {
   await exec('UPDATE users SET blocked=? WHERE id=?', [blocked ? 1 : 0, id]);
   await audit(me.id, blocked ? 'user.suspend' : 'user.unsuspend', `user ${id}`);
   back(path, 'ok', blocked ? 'Account suspended. They are signed out and cannot log in.' : 'Account restored.');
+}
+
+export async function grantAllAction(fd: FormData) {
+  const me = await requireRole('manage');
+  const amount = int(fd, 'amount');
+  if (!fd.get('confirm')) back('/admin/users', 'error', 'Tick the confirmation box first.');
+  if (amount < 1 || amount > 100_000) back('/admin/users', 'error', 'Enter 1 to 100,000 points.');
+  const n = await tx(async (t) => {
+    const res = await t.exec('UPDATE users SET points = points + ? WHERE blocked=0', [amount]);
+    await t.exec("INSERT INTO point_log (user_id, delta, reason) SELECT id, ?, 'Bonus from the site' FROM users WHERE blocked=0", [amount]);
+    return res.affectedRows;
+  });
+  await audit(me.id, 'points.grant_all', `${amount} each to ${n} users`);
+  back('/admin/users', 'ok', `${amount} points given to ${n} users.`);
 }
