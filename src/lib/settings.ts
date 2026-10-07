@@ -9,7 +9,15 @@ export type Settings = {
   announcement: string;
   showJackpot: boolean;
   maintenance: boolean;
+  ticketPoints: number;
+  dailyPoints: number;
+  signupPoints: number;
+  /** Points won for divisions 1 to 7. */
+  prizePoints: number[];
 };
+
+const nat = (v: string | undefined, d: number) => (v !== undefined && /^\d{1,9}$/.test(v) ? Number(v) : d);
+const DEFAULT_PRIZES = [100000, 20000, 5000, 1000, 200, 50, 20];
 
 const TTL = 30_000;
 let cache: { at: number; value: Settings } | null = null;
@@ -20,6 +28,10 @@ const DEFAULTS: Settings = {
   announcement: '',
   showJackpot: true,
   maintenance: false,
+  ticketPoints: 10,
+  dailyPoints: 100,
+  signupPoints: 1000,
+  prizePoints: DEFAULT_PRIZES,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -35,6 +47,10 @@ export async function getSettings(): Promise<Settings> {
         announcement: m.announcement || '',
         showJackpot: m.show_jackpot !== '0',
         maintenance: m.maintenance === '1',
+        ticketPoints: nat(m.ticket_points, 10),
+        dailyPoints: nat(m.daily_points, 100),
+        signupPoints: nat(m.signup_points, 1000),
+        prizePoints: DEFAULT_PRIZES.map((d, i) => nat(m.prize_points?.split(',')[i]?.trim(), d)),
       };
     } catch (err) {
       console.error('settings unavailable, using defaults:', err);
@@ -51,6 +67,10 @@ export async function saveSettings(s: Settings) {
     ['announcement', s.announcement],
     ['show_jackpot', s.showJackpot ? '1' : '0'],
     ['maintenance', s.maintenance ? '1' : '0'],
+    ['ticket_points', String(s.ticketPoints)],
+    ['daily_points', String(s.dailyPoints)],
+    ['signup_points', String(s.signupPoints)],
+    ['prize_points', s.prizePoints.join(',')],
   ];
   for (const [k, v] of rows) await exec('REPLACE INTO settings (k, v) VALUES (?,?)', [k, v]);
   cache = null;

@@ -86,18 +86,18 @@ export async function listAllCurrencies() {
   return rows.map((r) => ({ code: r.code, name: r.name, symbol: r.symbol, rate: Number(r.rate), active: Boolean(r.active) }));
 }
 
-export type UserRowOut = { id: number; email: string; role: Role; currency: string; createdAt: string; lastLogin: string | null; picks: number };
+export type UserRowOut = { id: number; email: string; role: Role; currency: string; createdAt: string; lastLogin: string | null; picks: number; points: number };
 
 export async function listUsers(q: string, limit = 200): Promise<UserRowOut[]> {
   const like = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
-  const rows = await query<RowDataPacket & { id: number; email: string; role: Role; currency: string; created_at: string; last_login_at: string | null; picks: number }>(
-    `SELECT u.id, u.email, u.role, u.currency, u.created_at, u.last_login_at, COUNT(s.id) AS picks
+  const rows = await query<RowDataPacket & { id: number; email: string; role: Role; currency: string; created_at: string; last_login_at: string | null; picks: number; points: number }>(
+    `SELECT u.id, u.email, u.role, u.currency, u.created_at, u.last_login_at, u.points, COUNT(s.id) AS picks
        FROM users u LEFT JOIN saved_sets s ON s.user_id = u.id
       ${q ? 'WHERE u.email LIKE ?' : ''}
       GROUP BY u.id ORDER BY u.id DESC LIMIT ?`,
     q ? [like, limit] : [limit],
   );
-  return rows.map((r) => ({ id: r.id, email: r.email, role: r.role, currency: r.currency, createdAt: r.created_at, lastLogin: r.last_login_at, picks: num(r.picks) }));
+  return rows.map((r) => ({ id: r.id, email: r.email, role: r.role, currency: r.currency, createdAt: r.created_at, lastLogin: r.last_login_at, picks: num(r.picks), points: num(r.points) }));
 }
 
 export async function listAllFaqs() {

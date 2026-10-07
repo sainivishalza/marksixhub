@@ -6,6 +6,7 @@ import { requireRole } from '@/lib/auth';
 import { parseCsv } from '@/lib/csv';
 import { bustCurrencies } from '@/lib/data';
 import { exec, query, tx, type Tx } from '@/lib/db';
+import { addPoints, settleTickets } from '@/lib/points';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
 import { SEO_DEFAULTS } from '@/lib/seo-db';
@@ -73,6 +74,7 @@ export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promis
     if ((err as { code?: string }).code === 'ER_DUP_ENTRY') return { errors: ['That draw number already exists.'], raw, n: Date.now() };
     throw err;
   }
+  await settleTickets();
   back('/admin/draws', 'ok', `Draw ${value.drawNo} saved.`);
   return {};
 }
@@ -88,6 +90,7 @@ export async function toggleDrawStatusAction(fd: FormData) {
   }
   if (!d.nums || !d.extra) back('/admin/draws', 'error', `Draw ${d.draw_no} has no winning numbers yet. Edit it first.`);
   await exec("UPDATE draws SET status='published' WHERE id=?", [id]);
+  await settleTickets();
   back('/admin/draws', 'ok', `Draw ${d.draw_no} is now published.`);
 }
 
@@ -134,6 +137,7 @@ export async function importDrawsAction(_prev: ImportState, fd: FormData): Promi
       await writePrizes(t, res.insertId, v);
     }
   });
+  await settleTickets();
   return { imported: valid.length };
 }
 
@@ -233,6 +237,19 @@ export async function saveSettingsAction(fd: FormData) {
     announcement: str(fd, 'announcement').slice(0, 300),
     showJackpot: Boolean(fd.get('show_jackpot')),
     maintenance: Boolean(fd.get('maintenance')),
+    ticketPoints: int(fd, 'ticket_points'),
+    dailyPoints: int(fd, 'daily_points'),
+    signupPoints: int(fd, 'signup_points'),
+    prizePoints: Array.from({ length: 7 }, (_, i) => int(fd, `prize_${i + 1}`)),
   });
   back('/admin/settings', 'ok', 'Settings saved.');
+}
+
+export async function grantPointsAction(fd: FormData) {
+  await requireRole('manage');
+  const id = int(fd, 'id');
+  const amount = int(fd, 'amount');
+  if (!id || !amount || Math.abs(amount) > 1_000_000) back('/admin/users', 'error', 'Enter a whole number of points between -1,000,000 and 1,000,000.');
+  const ok = await addPoints(id, amount, `Admin ${amount > 0 ? 'grant' : 'adjustment'}`);
+  back('/admin/users', ok ? 'ok' : 'error', ok ? 'Points updated.' : 'That would take the balance below zero.');
 }

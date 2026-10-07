@@ -1,4 +1,4 @@
-import { setRoleAction } from '@/actions/admin';
+import { grantPointsAction, setRoleAction } from '@/actions/admin';
 import { AdminTable, Notice, PageHeader, inputClass } from '@/components/admin/ui';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { listUsers } from '@/lib/admin-data';
@@ -27,7 +27,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
       <AdminTable
         caption="Users"
-        head={['Email', 'Role', 'Joined', 'Last login', 'Saved sets', 'Currency']}
+        head={['Email', 'Role', 'Joined', 'Last login', 'Saved sets', 'Points', 'Currency']}
         empty={users.length === 0 ? <p className="p-6 text-sm text-mute">No users match.</p> : null}
       >
         {users.map((u) => (
@@ -49,6 +49,14 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             <td className="whitespace-nowrap px-4 py-3 text-mute">{u.createdAt.slice(0, 10)}</td>
             <td className="whitespace-nowrap px-4 py-3 text-mute">{u.lastLogin ? u.lastLogin.slice(0, 16) : 'Never'}</td>
             <td className="px-4 py-3 font-mono tabular-nums">{u.picks}</td>
+            <td className="px-4 py-3">
+              <form action={grantPointsAction} className="flex items-center gap-2">
+                <input type="hidden" name="id" value={u.id} />
+                <span className="w-16 font-mono tabular-nums">{u.points}</span>
+                <input name="amount" type="number" placeholder="+/-" aria-label={`Points to add or remove for ${u.email}`} className={`${inputClass} h-9 w-24`} />
+                <Button type="submit" size="sm" variant="outline">Apply</Button>
+              </form>
+            </td>
             <td className="px-4 py-3 font-mono text-mute">{u.currency}</td>
           </tr>
         ))}

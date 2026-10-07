@@ -35,6 +35,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </label>
         </Panel>
 
+        <Panel title="Points (free play, no cash value)">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Points per ticket"><input name="ticket_points" type="number" min={0} defaultValue={s.ticketPoints} className={inputClass} /></Field>
+            <Field label="Daily free points"><input name="daily_points" type="number" min={0} defaultValue={s.dailyPoints} className={inputClass} /></Field>
+            <Field label="Sign-up points"><input name="signup_points" type="number" min={0} defaultValue={s.signupPoints} className={inputClass} /></Field>
+          </div>
+          <p className="mb-2 mt-4 text-sm text-mute">Points won per prize division</p>
+          <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
+            {s.prizePoints.map((v, i) => (
+              <Field key={i} label={`${i + 1}${['st', 'nd', 'rd'][i] ?? 'th'}`}><input name={`prize_${i + 1}`} type="number" min={0} defaultValue={v} className={inputClass} /></Field>
+            ))}
+          </div>
+        </Panel>
+
         <Panel title="Maintenance mode">
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="maintenance" defaultChecked={s.maintenance} className="mt-1" />

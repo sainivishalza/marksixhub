@@ -9,6 +9,8 @@ import { dbConfigured, exec, query } from '@/lib/db';
 import { isBall, sortAsc } from '@/lib/mark6';
 import { can } from '@/lib/perms';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
+import { addPoints } from '@/lib/points';
+import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
 import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
 
@@ -53,11 +55,14 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
 
   const currency = (await cookies()).get('cur')?.value;
   const hash = await hashPassword(password);
-  const { insertId } = await exec('INSERT INTO users (email, pass_hash, currency, last_login_at) VALUES (?,?,?,UTC_TIMESTAMP())', [
+  const { signupPoints } = await getSettings();
+  const { insertId } = await exec('INSERT INTO users (email, pass_hash, currency, points, last_login_at) VALUES (?,?,?,?,UTC_TIMESTAMP())', [
     email,
     hash,
     currency && /^[A-Z]{3}$/.test(currency) ? currency : 'HKD',
+    signupPoints,
   ]);
+  if (signupPoints) await exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [insertId, signupPoints, 'Welcome points']);
   await createSession(insertId, hash);
   redirect('/account');
 }
@@ -75,9 +80,22 @@ export async function saveSetAction(numbers: number[]): Promise<{ ok: boolean; m
   const [{ n }] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM saved_sets WHERE user_id=?', [user.id]);
   if (Number(n) >= MAX_SETS) return { ok: false, message: `You can keep up to ${MAX_SETS} saved sets. Delete one first.` };
   const [next] = await query<RowDataPacket & { draw_no: string }>("SELECT draw_no FROM draws WHERE status='upcoming' ORDER BY draw_date ASC LIMIT 1");
-  await exec('INSERT INTO saved_sets (user_id, nums, draw_no) VALUES (?,?,?)', [user.id, sortAsc(nums).join(','), next?.draw_no ?? null]);
+  if (!next) return { ok: false, message: 'No draw is open for tickets right now.' };
+  const { ticketPoints } = await getSettings();
+  const paid = await addPoints(user.id, -ticketPoints, `Ticket, draw ${next.draw_no}`);
+  if (!paid) return { ok: false, message: `You need ${ticketPoints} points for a ticket. Claim your free daily points in My account.` };
+  await exec('INSERT INTO saved_sets (user_id, nums, draw_no) VALUES (?,?,?)', [user.id, sortAsc(nums).join(','), next.draw_no]);
   revalidatePath('/account');
-  return { ok: true, message: next ? `Saved for draw ${next.draw_no}. Pick again to save another ticket.` : 'Saved to your account. Pick again to save another ticket.' };
+  return { ok: true, message: `Ticket entered for draw ${next.draw_no} (${ticketPoints} points). Pick again to enter another.` };
+}
+
+export async function claimDailyAction() {
+  const user = await requireUser();
+  const { dailyPoints } = await getSettings();
+  // One claim per UTC day; the WHERE makes a double click harmless.
+  const res = await exec('UPDATE users SET last_claim=UTC_DATE() WHERE id=? AND (last_claim IS NULL OR last_claim < UTC_DATE())', [user.id]);
+  if (res.affectedRows) await addPoints(user.id, dailyPoints, 'Daily free points');
+  revalidatePath('/account');
 }
 
 export async function deleteSetAction(fd: FormData) {

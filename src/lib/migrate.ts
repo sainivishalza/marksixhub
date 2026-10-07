@@ -57,6 +57,15 @@ const TABLES = [
     KEY idx_created (created_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS point_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    delta INT NOT NULL,
+    reason VARCHAR(80) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS settings (
     k VARCHAR(40) PRIMARY KEY,
     v TEXT NOT NULL
@@ -91,6 +100,10 @@ export const SETTING_DEFAULTS = {
   announcement: '',
   show_jackpot: '1',
   maintenance: '0',
+  ticket_points: '10',
+  daily_points: '100',
+  signup_points: '1000',
+  prize_points: '100000,20000,5000,1000,200,50,20',
 };
 
 async function hasColumn(table: string, column: string) {
@@ -119,6 +132,12 @@ export async function migrate() {
   }
 
   if (!(await hasColumn('saved_sets', 'draw_no'))) await exec('ALTER TABLE saved_sets ADD COLUMN draw_no VARCHAR(8) NULL, ADD KEY idx_draw (draw_no)');
+
+  if (!(await hasColumn('users', 'points'))) await exec('ALTER TABLE users ADD COLUMN points INT NOT NULL DEFAULT 0, ADD COLUMN last_claim DATE NULL');
+  if (!(await hasColumn('saved_sets', 'settled'))) {
+    await exec('ALTER TABLE saved_sets ADD COLUMN settled TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN won_points INT NOT NULL DEFAULT 0');
+    await exec('UPDATE saved_sets SET settled=1'); // tickets saved before points existed never pay
+  }
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
