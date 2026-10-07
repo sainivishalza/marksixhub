@@ -2,7 +2,7 @@ import type { Currency, Draw, EventItem, Prize } from './types';
 
 // Used ONLY in development when no database is configured, so the UI can be previewed.
 const draw = (id: number, drawNo: string, drawDate: string, numbers: number[], extra: number): Draw => ({
-  id, drawNo, drawDate, status: 'published', numbers, extra, estJackpotHkd: 0, note: null,
+  id, drawNo, drawDate, status: 'published', numbers, extra, estJackpotHkd: 0, snowballHkd: null, turnoverHkd: null, fundHkd: null, stopSelling: null, note: null,
 });
 
 export const sampleDraws: Draw[] = [
@@ -15,8 +15,9 @@ export const sampleDraws: Draw[] = [
 ];
 
 export const sampleNext: Draw = {
-  id: 9, drawNo: '26/082', drawDate: '2026-10-09', status: 'upcoming', numbers: [], extra: null,
-  estJackpotHkd: 28000000, note: 'Snowball: the first division prize rolled over.',
+  id: 9, drawNo: '26/107', drawDate: '2026-10-08', status: 'upcoming', numbers: [], extra: null,
+  estJackpotHkd: 13000000, snowballHkd: 8000000, turnoverHkd: 14675740, fundHkd: null, stopSelling: '21:15',
+  note: null,
 };
 
 export const samplePrizes: Prize[] = [

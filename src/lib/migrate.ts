@@ -108,6 +108,16 @@ export async function migrate() {
   await exec("ALTER TABLE users MODIFY role ENUM('user','viewer','editor','admin') NOT NULL DEFAULT 'user'");
   if (!(await hasColumn('users', 'last_login_at'))) await exec('ALTER TABLE users ADD COLUMN last_login_at DATETIME NULL');
 
+  // Extra details for an upcoming draw, as the HKJC lists them. All optional.
+  for (const [column, type] of [
+    ['stop_selling_time', 'TIME NULL'],
+    ['turnover_hkd', 'BIGINT NULL'],
+    ['snowball_hkd', 'BIGINT NULL'],
+    ['fund_hkd', 'BIGINT NULL'],
+  ] as const) {
+    if (!(await hasColumn('draws', column))) await exec(`ALTER TABLE draws ADD COLUMN ${column} ${type}`);
+  }
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 

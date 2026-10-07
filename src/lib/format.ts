@@ -27,3 +27,14 @@ export function dateLabel(iso: string, opts: Intl.DateTimeFormatOptions = {}): s
 /** Mark Six draws are held in the evening, Hong Kong time (UTC+8). */
 export const DRAW_TIME = '21:30:00+08:00';
 export const drawMoment = (iso: string) => `${iso}T${DRAW_TIME}`;
+
+/** "21:15" becomes "9:15 PM". */
+export function timeLabel(hhmm: string | null): string {
+  const m = /^(\d{2}):(\d{2})/.exec(hhmm ?? '');
+  if (!m) return '';
+  const h = Number(m[1]);
+  return `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+/** "Thursday, 8 October 2026" */
+export const dateLong = (iso: string) => dateLabel(iso, { weekday: 'long', month: 'long' });

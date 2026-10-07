@@ -19,7 +19,8 @@ const back = (path: string, kind: 'ok' | 'error', msg: string): never => redirec
 
 /* ---------- draws ---------- */
 
-export type DrawFormState = { errors?: string[]; raw?: Record<string, string> };
+/** `n` changes on every failed save so the form remounts and shows exactly what was typed (React 19 resets forms after an action). */
+export type DrawFormState = { errors?: string[]; raw?: Record<string, string>; n?: number };
 
 async function writePrizes(t: Tx, drawId: number, v: DrawInput) {
   if (v.status !== 'published') return;
@@ -28,30 +29,48 @@ async function writePrizes(t: Tx, drawId: number, v: DrawInput) {
   }
 }
 
+const DRAW_COLS = ['draw_no', 'draw_date', 'status', 'nums', 'extra', 'est_jackpot_hkd', 'snowball_hkd', 'turnover_hkd', 'fund_hkd', 'stop_selling_time', 'note'];
+const INSERT_DRAW = `INSERT INTO draws (${DRAW_COLS.join(', ')}) VALUES (${DRAW_COLS.map(() => '?').join(', ')})`;
+const UPDATE_DRAW = `UPDATE draws SET ${DRAW_COLS.map((c) => `${c}=?`).join(', ')} WHERE id=?`;
+const UPSERT_DRAW = `${INSERT_DRAW} ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id), ${DRAW_COLS.slice(1).map((c) => `${c}=VALUES(${c})`).join(', ')}`;
+
+// Same order as DRAW_COLS. Winning numbers are only stored for a published draw.
 const drawColumns = (v: DrawInput) => {
   const published = v.status === 'published';
-  return [v.drawNo, v.drawDate, v.status, published ? [...v.numbers].sort((a, b) => a - b).join(',') : null, published ? v.extra : null, v.estJackpotHkd, v.note || null];
+  return [
+    v.drawNo,
+    v.drawDate,
+    v.status,
+    published ? [...v.numbers].sort((a, b) => a - b).join(',') : null,
+    published ? v.extra : null,
+    v.estJackpotHkd,
+    v.snowballHkd,
+    v.turnoverHkd,
+    v.fundHkd,
+    v.stopSelling ? `${v.stopSelling}:00` : null,
+    v.note || null,
+  ];
 };
 
 export async function saveDrawAction(_prev: DrawFormState, fd: FormData): Promise<DrawFormState> {
   await requireRole('content');
   const raw = Object.fromEntries([...fd.entries()].filter(([, v]) => typeof v === 'string')) as Record<string, string>;
   const { value, errors } = readDraw(raw);
-  if (errors.length) return { errors, raw };
+  if (errors.length) return { errors, raw, n: Date.now() };
 
   const id = int(fd, 'id');
   try {
     await tx(async (t) => {
       let drawId = id;
       if (id) {
-        await t.exec('UPDATE draws SET draw_no=?, draw_date=?, status=?, nums=?, extra=?, est_jackpot_hkd=?, note=? WHERE id=?', [...drawColumns(value), id]);
+        await t.exec(UPDATE_DRAW, [...drawColumns(value), id]);
       } else {
-        drawId = (await t.exec('INSERT INTO draws (draw_no, draw_date, status, nums, extra, est_jackpot_hkd, note) VALUES (?,?,?,?,?,?,?)', drawColumns(value))).insertId;
+        drawId = (await t.exec(INSERT_DRAW, drawColumns(value))).insertId;
       }
       await writePrizes(t, drawId, value);
     });
   } catch (err) {
-    if ((err as { code?: string }).code === 'ER_DUP_ENTRY') return { errors: ['That draw number already exists.'], raw };
+    if ((err as { code?: string }).code === 'ER_DUP_ENTRY') return { errors: ['That draw number already exists.'], raw, n: Date.now() };
     throw err;
   }
   back('/admin/draws', 'ok', `Draw ${value.drawNo} saved.`);
@@ -111,11 +130,7 @@ export async function importDrawsAction(_prev: ImportState, fd: FormData): Promi
 
   await tx(async (t) => {
     for (const v of valid) {
-      const res = await t.exec(
-        `INSERT INTO draws (draw_no, draw_date, status, nums, extra, est_jackpot_hkd, note) VALUES (?,?,?,?,?,?,?)
-         ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id), draw_date=VALUES(draw_date), status=VALUES(status), nums=VALUES(nums), extra=VALUES(extra), est_jackpot_hkd=VALUES(est_jackpot_hkd), note=VALUES(note)`,
-        drawColumns(v),
-      );
+      const res = await t.exec(UPSERT_DRAW, drawColumns(v));
       await writePrizes(t, res.insertId, v);
     }
   });

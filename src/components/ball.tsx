@@ -8,6 +8,10 @@ const TONE_CLASS = { red: 'ball ball-red', blue: 'ball ball-blue', green: 'ball 
 
 export const ballClass = (n: number) => TONE_CLASS[ballTone(n)];
 
+// A number that is not picked yet: a coloured ring. Picking it turns it into the full ball above.
+const RING_CLASS = { red: 'border-tone-red', blue: 'border-tone-blue', green: 'border-tone-green' } as const;
+export const ringClass = (n: number) => `rounded-full border-2 bg-transparent font-mono font-bold tabular-nums text-ivory ${RING_CLASS[ballTone(n)]}`;
+
 type Props = { n: number; size?: keyof typeof SIZE; extra?: boolean; className?: string };
 
 /** Static ball, safe in server components. */

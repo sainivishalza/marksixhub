@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Bookmark, Copy, Eraser, Share2, Sparkles } from 'lucide-react';
 import { saveSetAction } from '@/actions/account';
 import { Button } from '@/components/ui/button';
-import { ballClass } from '@/components/ball';
+import { ballClass, ringClass } from '@/components/ball';
 import { ALL_BALLS, DIVISION_LABEL, evaluate, isBall, quickPick, sortAsc } from '@/lib/mark6';
 import { money } from '@/lib/format';
 import type { Currency, Prize } from '@/lib/types';
@@ -183,11 +183,9 @@ export function Picker({ latest, prizes, currency, loggedIn = false, id = 'board
                 toggle(n);
               }}
               className={cn(
-                ballClass(n),
+                on ? ballClass(n) : ringClass(n),
                 'aspect-square w-full text-sm transition duration-150 sm:text-base',
-                on
-                  ? 'z-10 scale-110 shadow-glow'
-                  : 'brightness-[.78] ring-1 ring-gold/50 hover:brightness-110',
+                on ? 'z-10 scale-110 shadow-glow' : 'hover:bg-white/10',
                 !on && complete && 'opacity-40 hover:opacity-80',
               )}
             >

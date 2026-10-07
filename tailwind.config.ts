@@ -18,6 +18,8 @@ const config: Config = {
         win: '#10B981',
         miss: '#EF4444',
         ball: { red: '#C8102E', blue: '#1F4FD8', green: '#12804A' },
+        // Softer tones for the outlined, not-yet-picked numbers on the dark board.
+        tone: { red: '#E8645F', blue: '#5C93C4', green: '#7FBF63' },
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],

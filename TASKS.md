@@ -18,6 +18,12 @@ Done in part 2 (code written, type-checked, built; NOT yet run against a real My
 - [x] Roles viewer/editor/admin; every server action checks the role itself
 - [x] Public pages read FAQs/SEO/settings from the database; staging.* sites are noindex
 
+Done in part 3:
+- [x] Live on marksixhub.com (Next.js through server.js, webpack build for Hostinger's old glibc)
+- [x] Draw details as the HKJC lists them: stop selling time, turnover, jackpot/snowball, estimated 1st division prize, fund (admin form, CSV import, public "Next draw" panel)
+- [x] Admin: only draw number and date are required to announce a draw; results are added later; form keeps what was typed after an error
+- [x] Number style: coloured rings, picked numbers become glossy white-centred balls (board, ticket, results)
+
 Todo (in order):
 1. Deploy branch `nextjs` to a STAGING site on Hostinger (staging.marksixhub.com, its own new database, BASE_URL=https://staging.marksixhub.com). Walk through: register, login, admin draw add/publish, CSV import, FAQ edit, settings, maintenance. Fix any SQL errors from the runtime logs.
 2. Lighthouse + header check on staging

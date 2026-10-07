@@ -5,7 +5,14 @@ export type Draw = {
   status: 'upcoming' | 'published';
   numbers: number[];
   extra: number | null;
+  /** Estimated 1st division prize (HK$). */
   estJackpotHkd: number;
+  /** Jackpot / snowball carried over (HK$), when announced. */
+  snowballHkd: number | null;
+  turnoverHkd: number | null;
+  fundHkd: number | null;
+  /** Last time bets are accepted, "HH:MM" Hong Kong time. */
+  stopSelling: string | null;
   note: string | null;
 };
 

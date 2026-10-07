@@ -1,15 +1,15 @@
 import Link from 'next/link';
 import { Dices, ListChecks, Trophy, ShieldCheck, Gift, FileCheck2 } from 'lucide-react';
-import { Countdown } from '@/components/countdown';
 import { FaqList } from '@/components/faq-list';
 import { HeroActions } from '@/components/hero-actions';
 import { Jackpot } from '@/components/jackpot';
+import { NextDrawPanel } from '@/components/next-draw-panel';
 import { Picker } from '@/components/picker';
 import { ResultStub } from '@/components/result-stub';
 import { ResultsTable } from '@/components/results-table';
 import { getUser } from '@/lib/auth';
 import { getCurrentCurrency, getDraws, getEvents, getFaqs, getLatestDraw, getNextDraw, getPrizes } from '@/lib/data';
-import { dateLabel, drawMoment } from '@/lib/format';
+import { dateLabel } from '@/lib/format';
 import { seoMetadata } from '@/lib/seo-db';
 import { getSettings } from '@/lib/settings';
 
@@ -86,42 +86,37 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto mt-16 grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:px-8">
+      <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:px-8">
+        {next ? (
+          <NextDrawPanel draw={next} currency={current} showPrizes={settings.showJackpot} />
+        ) : (
+          <div className="surface p-6 sm:p-8">
+            <h2 className="text-3xl">Next draw</h2>
+            <p className="mt-2 text-mute">The next draw will be announced here as soon as the date is known.</p>
+          </div>
+        )}
+      </section>
+
+      <section className={`mx-auto mt-16 grid max-w-7xl gap-10 px-4 sm:px-6 lg:px-8 ${events.length ? 'lg:grid-cols-[1.4fr_1fr]' : ''}`}>
         <div className="min-w-0">
           <h2 className="mb-5 text-3xl">Latest result</h2>
           {latest ? <ResultStub draw={latest} prizes={prizes} currency={current} /> : <p className="text-mute">The first result will appear here once it is published.</p>}
         </div>
 
-        <aside className="min-w-0 space-y-8">
-          <div>
-            <h2 className="mb-5 text-3xl">Next draw</h2>
-            {next ? (
-              <div className="surface p-6">
-                <p className="font-serif text-xl">Draw {next.drawNo}</p>
-                <p className="mb-5 text-mute">{dateLabel(next.drawDate)}, about 9:30 pm Hong Kong time</p>
-                <Countdown target={drawMoment(next.drawDate)} />
-                {next.note ? <p className="mt-5 text-sm text-mute">{next.note}</p> : null}
-              </div>
-            ) : (
-              <p className="text-mute">The next draw date will be announced soon.</p>
-            )}
-          </div>
-
-          {events.length ? (
-            <div>
-              <h2 className="mb-4 text-2xl">Coming up</h2>
-              <ul className="space-y-4">
-                {events.map((e) => (
-                  <li key={e.id}>
-                    <p className="font-serif text-lg">{e.title}</p>
-                    <time dateTime={e.eventDate} className="text-sm text-gold-bright">{dateLabel(e.eventDate)}</time>
-                    {e.body ? <p className="mt-1 text-sm text-mute">{e.body}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </aside>
+        {events.length ? (
+          <aside className="min-w-0">
+            <h2 className="mb-4 text-3xl">Coming up</h2>
+            <ul className="space-y-4">
+              {events.map((e) => (
+                <li key={e.id}>
+                  <p className="font-serif text-lg">{e.title}</p>
+                  <time dateTime={e.eventDate} className="text-sm text-gold-bright">{dateLabel(e.eventDate)}</time>
+                  {e.body ? <p className="mt-1 text-sm text-mute">{e.body}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </aside>
+        ) : null}
       </section>
 
       <section className="mx-auto mt-24 max-w-7xl px-4 sm:px-6 lg:px-8">

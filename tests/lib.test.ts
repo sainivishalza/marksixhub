@@ -81,3 +81,34 @@ test('email, password and redirect helpers', () => {
   assert.equal(safeNext('/account'), '/account');
   for (const bad of ['//evil.com', 'https://evil.com', '/\\evil.com', undefined, 'javascript:1']) assert.equal(safeNext(bad), '/');
 });
+
+test('an upcoming draw needs only a draw number and a date', () => {
+  const bare = readDraw({ draw_no: '26/107', draw_date: '2026-10-08' });
+  assert.deepEqual(bare.errors, []);
+  assert.equal(bare.value.status, 'upcoming');
+  assert.equal(bare.value.stopSelling, null);
+  assert.equal(bare.value.turnoverHkd, null);
+  assert.equal(bare.value.snowballHkd, null);
+  assert.equal(bare.value.fundHkd, null);
+});
+
+test('upcoming draw details as the HKJC lists them are accepted, with money typed any way', () => {
+  const r = readDraw({
+    draw_no: '26/107', draw_date: '2026-10-08', status: 'upcoming', stop_selling: '21:15',
+    turnover_hkd: '$14,675,740', snowball_hkd: '8,000,000', est_jackpot_hkd: '13000000', fund_hkd: '',
+  });
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.value.stopSelling, '21:15');
+  assert.equal(r.value.turnoverHkd, 14675740);
+  assert.equal(r.value.snowballHkd, 8000000);
+  assert.equal(r.value.estJackpotHkd, 13000000);
+  assert.equal(r.value.fundHkd, null, 'blank stays blank');
+  assert.equal(readDraw({ draw_no: '26/107', draw_date: '2026-10-08', stop_selling_time: '09:15' }).value.stopSelling, '09:15', 'CSV column name works too');
+});
+
+test('bad stop selling time is rejected; publishing with no numbers explains what to do', () => {
+  assert.ok(readDraw({ draw_no: '26/107', draw_date: '2026-10-08', stop_selling: '25:99' }).errors.length);
+  const empty = readDraw({ draw_no: '26/107', draw_date: '2026-10-08', status: 'published' });
+  assert.equal(empty.errors.length, 1);
+  assert.match(empty.errors[0], /keep this draw as Upcoming/);
+});

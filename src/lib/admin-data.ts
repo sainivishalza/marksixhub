@@ -44,6 +44,13 @@ export async function getDashboard() {
   };
 }
 
+/** The draw number after the latest one (26/106 becomes 26/107), to save typing. Empty if there are no draws yet. */
+export async function suggestNextDrawNo(): Promise<string> {
+  const rows = await query<RowDataPacket & { draw_no: string }>('SELECT draw_no FROM draws ORDER BY draw_date DESC, id DESC LIMIT 1');
+  const m = /^(\d{2})\/(\d{3})$/.exec(rows[0]?.draw_no ?? '');
+  return m ? `${m[1]}/${String(Number(m[2]) + 1).padStart(3, '0')}` : '';
+}
+
 export async function listDraws(q: string, page: number, perPage = 25): Promise<{ draws: Draw[]; total: number }> {
   const like = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
   const where = q ? 'WHERE draw_no LIKE ? OR draw_date LIKE ?' : '';

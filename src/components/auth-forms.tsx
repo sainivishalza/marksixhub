@@ -10,11 +10,11 @@ const none: FormState = {};
 export function LoginForm({ next }: { next: string }) {
   const [state, action] = useActionState(loginAction, none);
   return (
-    <form action={action} className="space-y-4">
+    <form key={state.email ?? ''} action={action} className="space-y-4">
       <input type="hidden" name="next" value={next} />
       <label className="block text-sm text-mute">
         Email
-        <input className={input} type="email" name="email" required autoComplete="email" maxLength={190} />
+        <input className={input} type="email" name="email" required autoComplete="email" maxLength={190} defaultValue={state.email} />
       </label>
       <label className="block text-sm text-mute">
         Password
@@ -29,10 +29,10 @@ export function LoginForm({ next }: { next: string }) {
 export function RegisterForm() {
   const [state, action] = useActionState(registerAction, none);
   return (
-    <form action={action} className="space-y-4">
+    <form key={state.email ?? ''} action={action} className="space-y-4">
       <label className="block text-sm text-mute">
         Email
-        <input className={input} type="email" name="email" required autoComplete="email" maxLength={190} />
+        <input className={input} type="email" name="email" required autoComplete="email" maxLength={190} defaultValue={state.email} />
       </label>
       <label className="block text-sm text-mute">
         Password (at least 10 characters)

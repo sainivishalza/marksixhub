@@ -34,11 +34,14 @@
 @layer components {
   /* Lacquered Mark Six ball: real red/blue/green colour sets with a specular highlight. */
   .ball {
-    @apply relative inline-grid place-items-center rounded-full font-mono font-bold text-white shadow-lacquer;
+    @apply relative inline-grid place-items-center rounded-full font-mono font-bold shadow-lacquer;
     font-variant-numeric: tabular-nums;
+    color: #15171c;
+    /* White centre disc on top, then the gloss, then the shading, over the coloured body. */
     background-image:
-      radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 38%),
-      radial-gradient(circle at 50% 120%, rgba(0, 0, 0, 0.35), transparent 60%);
+      radial-gradient(circle closest-side at 50% 50%, #fff 0 60%, #e6e6ec 64%, transparent 66%),
+      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 36%),
+      radial-gradient(circle at 50% 118%, rgba(0, 0, 0, 0.4), transparent 58%);
   }
   .ball-red { background-color: theme('colors.ball.red'); }
   .ball-blue { background-color: theme('colors.ball.blue'); }

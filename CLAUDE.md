@@ -7,12 +7,12 @@ marksixhub.com: information-only Hong Kong Mark Six site (number picker, results
 - At session start: read TASKS.md and DESIGN.md. At end: update TASKS.md.
 - Log non-obvious choices in DECISIONS.md. One task at a time.
 - Never read node_modules or .next. Before finishing a change: `npm run typecheck`, `npm test`, `npm run build`.
-- Branches: `main` = live Express site (still deployed on Hostinger). `nextjs` = the Next.js rebuild. Do not merge to main until TASKS.md says parity is reached.
+- Branches: `main` = live site (the Next.js app, deployed on Hostinger through `server.js`). `nextjs` = working branch; fast-forward `main` to it to go live. The old Express app is in `legacy-express/`.
 
 ## Stack (branch nextjs)
 Next.js 16 App Router, React 19, TypeScript strict, Tailwind 3 (tokens in tailwind.config.ts), Framer Motion, Radix accordion, MySQL via mysql2.
 - `src/app/*` routes. `src/components/*` UI. `src/lib/*`: `mark6.ts` (ball colours, quickPick, evaluate), `data.ts` (server-only DB reads), `format.ts`, `seo.ts`, `sample.ts` (dev-only fixtures when no DB is configured).
-- `legacy-express/` is the old app, kept for reference until parity. Same MySQL tables; only add new tables, never change existing ones.
+- `legacy-express/` is the old app, kept for reference. Same MySQL tables: only add tables or columns (see `src/lib/migrate.ts`), never drop or rename.
 - Config from env vars only (`.env.example`). Never commit `.env`; the repo is public.
 
 ## Code rules

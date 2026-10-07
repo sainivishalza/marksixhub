@@ -12,7 +12,8 @@ import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
 import { rateLimit } from '@/lib/rate-limit';
 import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
 
-export type FormState = { error?: string; ok?: string };
+/** `email` is echoed back after a failed attempt so the form can keep what was typed. */
+export type FormState = { error?: string; ok?: string; email?: string };
 
 const MAX_SETS = 50;
 const text = (fd: FormData, k: string) => (typeof fd.get(k) === 'string' ? (fd.get(k) as string) : '');
@@ -30,7 +31,7 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
   const password = text(fd, 'password').slice(0, 200);
   const [user] = await query<UserRow>('SELECT id, pass_hash, role FROM users WHERE email=?', [email]);
   const ok = user ? await verifyPassword(password, user.pass_hash) : (await verifyPassword(password, DUMMY_HASH), false);
-  if (!ok || !user) return { error: 'Wrong email or password.' };
+  if (!ok || !user) return { error: 'Wrong email or password.', email };
 
   await createSession(user.id, user.pass_hash);
   await touchLogin(user.id);
@@ -45,10 +46,10 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
 
   const email = text(fd, 'email').trim().toLowerCase();
   const password = text(fd, 'password');
-  if (!EMAIL.test(email)) return { error: 'Enter a valid email address.' };
+  if (!EMAIL.test(email)) return { error: 'Enter a valid email address.', email };
   const problem = passwordProblem(password);
-  if (problem) return { error: problem };
-  if ((await query('SELECT id FROM users WHERE email=?', [email])).length) return { error: 'That email is already registered. Try logging in.' };
+  if (problem) return { error: problem, email };
+  if ((await query('SELECT id FROM users WHERE email=?', [email])).length) return { error: 'That email is already registered. Try logging in.', email };
 
   const currency = (await cookies()).get('cur')?.value;
   const hash = await hashPassword(password);

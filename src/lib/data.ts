@@ -13,7 +13,10 @@ const useSample = !dbConfigured && process.env.NODE_ENV !== 'production';
 export type DrawRow = RowDataPacket & {
   id: number; draw_no: string; draw_date: string; status: 'upcoming' | 'published';
   nums: string | null; extra: number | null; est_jackpot_hkd: number | string; note: string | null;
+  snowball_hkd: number | string | null; turnover_hkd: number | string | null; fund_hkd: number | string | null; stop_selling_time: string | null;
 };
+
+const optNumber = (v: number | string | null) => (v === null || v === undefined ? null : Number(v));
 
 export const toDraw = (r: DrawRow): Draw => ({
   id: r.id,
@@ -23,6 +26,10 @@ export const toDraw = (r: DrawRow): Draw => ({
   numbers: r.nums ? r.nums.split(',').map(Number) : [],
   extra: r.extra,
   estJackpotHkd: Number(r.est_jackpot_hkd),
+  snowballHkd: optNumber(r.snowball_hkd),
+  turnoverHkd: optNumber(r.turnover_hkd),
+  fundHkd: optNumber(r.fund_hkd),
+  stopSelling: r.stop_selling_time ? r.stop_selling_time.slice(0, 5) : null,
   note: r.note,
 });
 
