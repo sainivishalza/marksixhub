@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { RowDataPacket } from 'mysql2/promise';
-import { setBlockedAction } from '@/actions/admin';
+import { setBlockedAction, setVerifiedAction } from '@/actions/admin';
 import { AdminTable, Notice, PageHeader, Panel } from '@/components/admin/ui';
 import { requireRole } from '@/lib/auth';
 import { can } from '@/lib/perms';
@@ -13,7 +13,7 @@ export default async function UserDetailPage({ params, searchParams }: { params:
   const me = await requireRole('support');
   const { ok, error } = await searchParams;
   const id = parseInt((await params).id, 10);
-  const [user] = Number.isInteger(id) ? await query<RowDataPacket & { email: string; points: number; blocked: number; created_at: string; last_login_at: string | null }>('SELECT email, points, blocked, created_at, last_login_at FROM users WHERE id=?', [id]) : [];
+  const [user] = Number.isInteger(id) ? await query<RowDataPacket & { email: string; points: number; blocked: number; email_verified: number; created_at: string; last_login_at: string | null }>('SELECT email, points, blocked, email_verified, created_at, last_login_at FROM users WHERE id=?', [id]) : [];
   if (!user) notFound();
   const [log, orders] = await Promise.all([
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 100', [id]),
@@ -26,6 +26,13 @@ export default async function UserDetailPage({ params, searchParams }: { params:
       <Panel className="mb-6">
         <p className="text-sm text-mute">Points balance</p>
         <p className="font-mono text-3xl tabular-nums text-gold-bright">{Number(user.points)}</p>
+        <p className="mt-2 text-sm text-mute">Email: {user.email_verified ? 'confirmed' : 'not confirmed yet'}</p>
+        {!user.email_verified && can(me.role, 'manage') ? (
+          <form action={setVerifiedAction} className="mt-2">
+            <input type="hidden" name="id" value={id} />
+            <Button type="submit" variant="outline" size="sm">Mark email as confirmed</Button>
+          </form>
+        ) : null}
         {id !== me.id && can(me.role, 'manage') ? (
           <form action={setBlockedAction} className="mt-4 flex items-center gap-3">
             <input type="hidden" name="id" value={id} />

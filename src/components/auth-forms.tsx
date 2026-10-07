@@ -42,6 +42,7 @@ export function RegisterForm() {
         Password (at least 10 characters)
         <input className={input} type="password" name="password" required minLength={10} maxLength={200} autoComplete="new-password" />
       </label>
+      <p className="text-xs text-mute">We will email you a link to confirm your address.</p>
       <FormMessage error={state.error} />
       <SubmitButton size="lg" pendingText="Creating account..." className="w-full">Create account</SubmitButton>
     </form>

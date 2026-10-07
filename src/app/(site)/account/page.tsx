@@ -4,7 +4,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { BallRow } from '@/components/ball';
 import { ChangePasswordForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
-import { beginTotpAction, claimDailyAction, confirmTotpAction, deleteSetAction, disableTotpAction, dismissWinsAction, saveNicknameAction } from '@/actions/account';
+import { beginTotpAction, claimDailyAction, resendVerificationAction, confirmTotpAction, deleteSetAction, disableTotpAction, dismissWinsAction, saveNicknameAction } from '@/actions/account';
 import { requireUser } from '@/lib/auth';
 import { getCurrentCurrency } from '@/lib/data';
 import { query } from '@/lib/db';
@@ -15,8 +15,8 @@ import { DIVISION_LABEL, evaluate, parseNumbers } from '@/lib/mark6';
 
 export const metadata: Metadata = { title: 'My account', robots: { index: false, follow: false } };
 
-export default async function AccountPage({ searchParams }: { searchParams: Promise<{ nick?: string; two?: string }> }) {
-  const { nick, two } = await searchParams;
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ nick?: string; two?: string; mail?: string; verified?: string }> }) {
+  const { nick, two, mail, verified } = await searchParams;
   const user = await requireUser('/account');
   const [points, settings, [claim]] = await Promise.all([
     getPoints(user.id),
@@ -52,6 +52,17 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         {user.email}. Prizes show in <span className="font-mono text-ivory">{current.code}</span>; change it with the selector in the header.
       </p>
 
+      {verified ? <p role="status" className="mt-6 rounded-lg border border-win/40 bg-win/10 px-4 py-2 text-sm text-win">Email confirmed. You can place orders now.</p> : null}
+      {!user.verified ? (
+        <section className="mt-6 rounded-2xl border border-gold/50 p-4" aria-label="Confirm your email">
+          <p className="text-ivory">Confirm your email to place orders and receive your welcome points.</p>
+          <p className="mt-1 text-sm text-mute">We sent a link to {user.email}. It works for 24 hours. Check your spam folder if you cannot see it.</p>
+          {mail === 'sent' ? <p role="status" className="mt-2 text-sm text-win">A new link is on its way.</p> : null}
+          {mail === 'wait' ? <p role="alert" className="mt-2 text-sm text-miss">Too many requests. Try again in an hour.</p> : null}
+          <form action={resendVerificationAction} className="mt-3"><Button type="submit" size="sm" variant="outline">Send me a new link</Button></form>
+        </section>
+      ) : null}
+
       <section className="surface mt-8 flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
           <p className="text-sm text-mute">Points balance</p>
@@ -60,7 +71,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <p className="mt-1 text-xs text-mute">Free play points. They are not money, cannot be bought and cannot be cashed out. A ticket costs {settings.ticketPoints} points.</p>
         </div>
         <form action={claimDailyAction}>
-          <Button type="submit" disabled={Boolean(Number(claim?.done))}>{Number(claim?.done) ? 'Claimed today' : `Claim ${settings.dailyPoints} free points`}</Button>
+          <Button type="submit" disabled={Boolean(Number(claim?.done)) || !user.verified}>{Number(claim?.done) ? 'Claimed today' : `Claim ${settings.dailyPoints} free points`}</Button>
         </form>
       </section>
 

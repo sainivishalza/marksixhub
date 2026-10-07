@@ -12,7 +12,8 @@ import { newTotpSecret, verifyTotp } from '@/lib/totp';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '@/lib/password';
 import { createHash, randomBytes } from 'node:crypto';
 import { BASE_URL } from '@/lib/seo';
-import { sendMail } from '@/lib/mail';
+import { mailConfigured, sendMail } from '@/lib/mail';
+import { findVerification, markVerified, sendVerification, useVerification } from '@/lib/verify';
 import { addPoints, openDraw } from '@/lib/points';
 import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
@@ -82,14 +83,19 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
   const ip = ipHash(await clientIp());
   const [recent] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM users WHERE signup_ip=? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY', [ip]);
   const signupPoints = Number(recent.n) < 3 ? settings.signupPoints : 0;
-  const { insertId } = await exec('INSERT INTO users (email, pass_hash, currency, points, signup_ip, last_login_at) VALUES (?,?,?,?,?,UTC_TIMESTAMP())', [
+  // With email sending set up, the account starts unconfirmed and the welcome points wait until the link is opened.
+  const needsConfirm = mailConfigured;
+  const { insertId } = await exec('INSERT INTO users (email, pass_hash, currency, points, pending_bonus, email_verified, signup_ip, last_login_at) VALUES (?,?,?,?,?,?,?,UTC_TIMESTAMP())', [
     email,
     hash,
     currency && /^[A-Z]{3}$/.test(currency) ? currency : 'HKD',
-    signupPoints,
+    needsConfirm ? 0 : signupPoints,
+    needsConfirm ? signupPoints : 0,
+    needsConfirm ? 0 : 1,
     ip,
   ]);
-  if (signupPoints) await exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [insertId, signupPoints, 'Welcome points']);
+  if (!needsConfirm && signupPoints) await exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [insertId, signupPoints, 'Welcome points']);
+  if (needsConfirm) void sendVerification(insertId, email);
   await createSession(insertId, hash);
   redirect('/account');
 }
@@ -105,6 +111,7 @@ const MAX_PER_ORDER = 20;
 export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolean; message: string; points?: number; orderId?: number }> {
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in to place tickets.' };
+  if (!user.verified) return { ok: false, message: 'Confirm your email address first. We sent you a link; you can ask for another one in My account.' };
   const tickets = (Array.isArray(sets) ? sets : []).slice(0, MAX_PER_ORDER).map((s) => [...new Set(Array.isArray(s) ? s.map(Number) : [])]);
   if (!tickets.length || tickets.some((t) => t.length !== 6 || !t.every(isBall))) {
     return { ok: false, message: 'Each ticket needs exactly 6 different numbers from 1 to 49.' };
@@ -137,6 +144,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
 
 export async function claimDailyAction() {
   const user = await requireUser();
+  if (!user.verified) return;
   const { dailyPoints } = await getSettings();
   // One claim per UTC day; the WHERE makes a double click harmless. MySQL assigns left to right, so `streak` sees the old last_claim.
   const res = await exec(
@@ -297,6 +305,29 @@ export async function resetPasswordAction(_prev: FormState, fd: FormData): Promi
   const claimed = await exec('UPDATE password_resets SET used=1 WHERE id=? AND used=0', [row.id]);
   if (!claimed.affectedRows) return { error: 'This link has expired or was already used. Ask for a new one.' };
   await exec('UPDATE users SET pass_hash=? WHERE id=?', [hash, row.user_id]); // also signs out every existing session
+  await markVerified(row.user_id); // a reset link only reaches the owner of the address
   await exec('DELETE FROM login_fails WHERE email=(SELECT email FROM users WHERE id=?)', [row.user_id]);
   redirect('/login?reset=1');
+}
+
+/* ---------- email confirmation ---------- */
+
+export async function resendVerificationAction() {
+  const user = await requireUser();
+  if (user.verified) redirect('/account');
+  const limit = rateLimit(`resend:${user.id}`, 3, 60 * 60_000);
+  if (!limit.ok) redirect('/account?mail=wait');
+  await sendVerification(user.id, user.email);
+  redirect('/account?mail=sent');
+}
+
+/** The link only shows a button; this action does the work, so mail scanners that open links cannot use it up. */
+export async function verifyEmailAction(fd: FormData) {
+  const limit = rateLimit(`verify:${await clientIp()}`, 20, 60 * 60_000);
+  if (!limit.ok) redirect('/verify?error=1');
+  const row = await findVerification(text(fd, 'token').slice(0, 100));
+  if (!row) redirect('/verify?error=1');
+  await useVerification(row.id);
+  await markVerified(row.user_id);
+  redirect('/account?verified=1');
 }

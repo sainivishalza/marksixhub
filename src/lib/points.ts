@@ -61,11 +61,12 @@ export async function openDraw(): Promise<{ drawNo: string; closesAt: Date } | n
 }
 
 export async function walletFor(userId: number, cost: number) {
-  const [points, open, favs, [w]] = await Promise.all([
+  const [points, open, favs, [w], [v]] = await Promise.all([
     getPoints(userId),
     openDraw(),
     query<RowDataPacket & { id: number; nums: string }>('SELECT id, nums FROM favourites WHERE user_id=? ORDER BY id DESC', [userId]),
     query<RowDataPacket & { n: number | null }>('SELECT SUM(won_points) AS n FROM saved_sets WHERE user_id=? AND settled=1 AND notified=0 AND won_points>0', [userId]),
+    query<RowDataPacket & { ok: number }>('SELECT email_verified AS ok FROM users WHERE id=?', [userId]),
   ]);
   return {
     points,
@@ -74,6 +75,7 @@ export async function walletFor(userId: number, cost: number) {
     closesAt: open?.closesAt.toISOString() ?? null,
     favourites: favs.map((f) => ({ id: f.id, nums: f.nums.split(',').map(Number) })),
     unseenWins: Number(w?.n) || 0,
+    verified: Boolean(v?.ok),
   };
 }
 

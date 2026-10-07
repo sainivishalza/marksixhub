@@ -12,7 +12,7 @@ const COOKIE = 'mh_session';
 const MAX_AGE = 7 * 24 * 3600;
 const prod = process.env.NODE_ENV === 'production';
 
-export type User = { id: number; email: string; role: Role; currency: string };
+export type User = { id: number; email: string; role: Role; currency: string; verified: boolean };
 
 function secret() {
   const s = process.env.SESSION_SECRET;
@@ -38,7 +38,7 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-type UserRow = RowDataPacket & { id: number; email: string; role: Role; currency: string; pass_hash: string; blocked: number };
+type UserRow = RowDataPacket & { id: number; email: string; role: Role; currency: string; pass_hash: string; blocked: number; email_verified: number };
 
 /** The signed-in user, or null. Cached per request. */
 export const getUser = cache(async (): Promise<User | null> => {
@@ -49,10 +49,10 @@ export const getUser = cache(async (): Promise<User | null> => {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ['HS256'] });
-    const rows = await query<UserRow>('SELECT id, email, role, currency, pass_hash, blocked FROM users WHERE id=?', [Number(payload.sub)]);
+    const rows = await query<UserRow>('SELECT id, email, role, currency, pass_hash, blocked, email_verified FROM users WHERE id=?', [Number(payload.sub)]);
     const u = rows[0];
     if (!u || u.blocked || payload.pv !== fingerprint(u.pass_hash)) return null;
-    return { id: u.id, email: u.email, role: u.role, currency: u.currency };
+    return { id: u.id, email: u.email, role: u.role, currency: u.currency, verified: Boolean(u.email_verified) };
   } catch {
     return null;
   }

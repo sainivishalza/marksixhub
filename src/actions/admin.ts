@@ -7,6 +7,7 @@ import { parseCsv } from '@/lib/csv';
 import { bustCurrencies } from '@/lib/data';
 import { exec, query, tx, type Tx } from '@/lib/db';
 import { audit } from '@/lib/audit';
+import { markVerified } from '@/lib/verify';
 import { addPoints, reversePayouts, settleTickets } from '@/lib/points';
 import { isRole } from '@/lib/perms';
 import { saveSeo, saveSettings } from '@/lib/settings';
@@ -348,4 +349,13 @@ export async function grantAllAction(fd: FormData) {
   });
   await audit(me.id, 'points.grant_all', `${amount} each to ${n} users`);
   back('/admin/users', 'ok', `${amount} points given to ${n} users.`);
+}
+
+/** For someone who cannot receive the email: the admin confirms the address by hand. Pays the held welcome points. */
+export async function setVerifiedAction(fd: FormData) {
+  const me = await requireRole('manage');
+  const id = int(fd, 'id');
+  await markVerified(id);
+  await audit(me.id, 'user.verify', `user ${id}`);
+  back(`/admin/users/${id}`, 'ok', 'Email marked as confirmed.');
 }

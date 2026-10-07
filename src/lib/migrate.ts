@@ -108,6 +108,15 @@ const TABLES = [
     KEY idx_user (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS email_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used TINYINT(1) NOT NULL DEFAULT 0,
+    KEY idx_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS settings (
     k VARCHAR(40) PRIMARY KEY,
     v TEXT NOT NULL
@@ -203,6 +212,11 @@ export async function migrate() {
   // Orders placed before approvals existed count as accepted.
   if (!(await hasColumn('orders', 'status'))) await exec("ALTER TABLE orders ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'accepted', ADD KEY idx_status (status)");
 
+  if (!(await hasColumn('users', 'email_verified'))) {
+    await exec('ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN pending_bonus INT NOT NULL DEFAULT 0');
+    await exec('UPDATE users SET email_verified=1'); // accounts that already exist are not asked to confirm
+  }
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 
@@ -216,7 +230,7 @@ export async function migrate() {
   if (email && password) {
     const admins = await query<RowDataPacket>("SELECT id FROM users WHERE role='admin' LIMIT 1");
     if (!admins.length) {
-      await exec("INSERT INTO users (email, pass_hash, role) VALUES (?,?,'admin') ON DUPLICATE KEY UPDATE role='admin'", [email, await hashPassword(password)]);
+      await exec("INSERT INTO users (email, pass_hash, role, email_verified) VALUES (?,?,'admin',1) ON DUPLICATE KEY UPDATE role='admin'", [email, await hashPassword(password)]);
       console.log('Admin account ready for', email);
     }
   }

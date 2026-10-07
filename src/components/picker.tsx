@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 type LatestDraw = { drawNo: string; numbers: number[]; extra: number | null };
 type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; wallet?: Wallet | null; id?: string };
-type Wallet = { points: number; cost: number; drawNo: string | null; closesAt: string | null; favourites: Favourite[]; unseenWins: number };
+type Wallet = { points: number; cost: number; drawNo: string | null; closesAt: string | null; favourites: Favourite[]; unseenWins: number; verified: boolean };
 
 const PICK = 6;
 const MAX_ORDER = 20;
@@ -508,7 +508,12 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
             Balance <span className="font-mono text-gold-bright">{points}</span> points. Each ticket costs <span className="font-mono">{wallet.cost}</span>.
             {wallet.drawNo ? ` For draw ${wallet.drawNo}${wallet.closesAt ? `, ordering closes ${new Date(wallet.closesAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} (${left(wallet.closesAt, now)})` : ''}.` : ' Ordering is closed until the next draw is announced.'}
           </p>
-          <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo}>
+          {!wallet.verified ? (
+            <p className="mt-2 text-sm text-gold-bright">
+              Confirm your email to submit orders. We sent you a link; <Link href="/account" className="underline underline-offset-4">ask for another in My account</Link>.
+            </p>
+          ) : null}
+          <Button className="mt-2" onClick={place} disabled={!orders.length || placing || !wallet.drawNo || !wallet.verified}>
             <Ticket aria-hidden className="h-4 w-4" />
             {placing ? 'Submitting...' : orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${cost(orders)} points)` : 'Submit order'}
           </Button>
