@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { saveDrawAction, type DrawFormState } from '@/actions/admin';
-import { Field, inputClass, Panel } from '@/components/admin/ui';
+import { Field, inputClass, Panel, textareaClass } from '@/components/admin/ui';
 import { NumberBoxes } from '@/components/number-boxes';
 import { FormMessage, SubmitButton } from '@/components/submit-button';
 import { buttonVariants } from '@/components/ui/button';
-import { DIVISION_LABEL, DIVISION_RULE } from '@/lib/mark6';
+import { DIVISION_LABEL, DIVISION_RULE, parseResultText } from '@/lib/mark6';
 import type { Draw, Prize } from '@/lib/types';
 
 const none: DrawFormState = {};
@@ -32,14 +32,43 @@ export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Dra
   const [state, action] = useActionState(saveDrawAction, none);
   const raw = state.raw;
   // After a failed save, show what the person typed; otherwise show the saved draw.
-  const val = (name: string, fallback: string | number | null | undefined) => raw?.[name] ?? (fallback ?? '').toString();
+  const [fill, setFill] = useState<Record<string, string>>({});
+  const [fillN, setFillN] = useState(0);
+  const [pasted, setPasted] = useState('');
+  const [found, setFound] = useState('');
+  const val = (name: string, fallback: string | number | null | undefined) => fill[name] ?? raw?.[name] ?? (fallback ?? '').toString();
+
+  // Reads copied results text into the boxes below; nothing is saved until the person checks it and presses Save.
+  function fillFromText() {
+    const r = parseResultText(pasted);
+    const next: Record<string, string> = {};
+    r.numbers.forEach((n, i) => (next[`n${i + 1}`] = String(n)));
+    if (r.extra) next.extra = String(r.extra);
+    if (r.turnover) next.turnover_hkd = r.turnover;
+    if (r.drawNo && !draw) next.draw_no = r.drawNo;
+    for (const p of r.prizes) {
+      next[`w${p.division}`] = p.winners;
+      next[`p${p.division}`] = p.prize;
+    }
+    if (!r.numbers.length && !r.prizes.length) return setFound('Could not find the winning numbers in that text. Copy the results table and try again, or type them in.');
+    setFill((f) => ({ ...f, ...next }));
+    setFillN((n) => n + 1);
+    const mismatch = draw && r.drawNo && r.drawNo !== draw.drawNo ? ` Warning: the text is for draw ${r.drawNo}, but this is draw ${draw.drawNo}.` : '';
+    setFound(`Filled: ${r.numbers.length ? 'winning numbers' : 'no numbers'}${r.extra ? ', extra' : ''}${r.turnover ? ', turnover' : ''}, ${r.prizes.length} prize ${r.prizes.length === 1 ? 'row' : 'rows'}. Check every box against the official result, then set the status and save.${mismatch}`);
+  }
   const [copied, setCopied] = useState(false);
   const prize = (division: number) => (copied ? lastPrizes : prizes)?.find((p) => p.division === division);
 
   return (
     <form action={action} className="max-w-4xl">
+      <Panel title="Fill from copied results text (optional)" className="mb-6">
+        <p className="mb-2 text-sm text-mute">Copy the result from the official results page and paste it here. The boxes below are filled in for you to check; nothing is saved until you press Save.</p>
+        <textarea value={pasted} onChange={(e) => setPasted(e.target.value)} rows={4} aria-label="Copied results text" placeholder="Winning numbers 3 12 25 31 40 49 Extra 7 ... 1st Prize 0.0 $0 ..." className={`${textareaClass} font-mono`} />
+        <button type="button" onClick={fillFromText} disabled={!pasted.trim()} className="mt-2 h-11 rounded-lg border border-gold px-4 text-sm text-gold-bright hover:bg-raised disabled:opacity-50 max-sm:w-full">Fill the form</button>
+        {found ? <p role="status" className="mt-2 text-sm text-ivory">{found}</p> : null}
+      </Panel>
       {/* The key changes after every failed save, so the fields remount with exactly what was typed. */}
-      <div key={state.n ?? 0} className="space-y-6">
+      <div key={`${state.n ?? 0}-${fillN}`} className="space-y-6">
         <input type="hidden" name="id" value={draw?.id ?? ''} />
         {state.errors?.map((e) => <FormMessage key={e} error={e} />)}
 

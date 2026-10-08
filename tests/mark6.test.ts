@@ -159,3 +159,20 @@ test('digits that arrive all at once are read left to right', async () => {
   assert.deepEqual(splitRun('123'), ['12', '3']);
   assert.deepEqual(splitRun(''), []);
 });
+
+test('pasted result text fills numbers, extra, turnover and prizes', async () => {
+  const { parseResultText } = await import('../src/lib/mark6.ts');
+  const r = parseResultText(`Draw 26/106 07/10/2026
+Winning Numbers 3 12 25 31 40 49 Extra 7
+Total Turnover $14,675,740
+1st Prize 0.0 $0
+2nd Prize 2.5 $1,200,000
+3rd Prize 28.0 $85,000.00
+7th Prize 5,000 $40`);
+  assert.equal(r.drawNo, '26/106');
+  assert.deepEqual(r.numbers, [3, 12, 25, 31, 40, 49]);
+  assert.equal(r.extra, 7);
+  assert.equal(r.turnover, '14675740');
+  assert.deepEqual(r.prizes.map((p) => [p.division, p.winners, p.prize]), [[1, '0.0', '0'], [2, '2.5', '1200000'], [3, '28.0', '85000'], [7, '5000', '40']]);
+  assert.deepEqual(parseResultText('nothing useful here').numbers, []);
+});

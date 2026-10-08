@@ -114,3 +114,33 @@ export function boxNumbers(cells: string[]): number[] {
   }
   return out;
 }
+
+export type PastedResult = { drawNo?: string; numbers: number[]; extra?: number; turnover?: string; prizes: { division: number; winners: string; prize: string }[] };
+
+/**
+ * Reads text copied from a results page: draw number, the first run of seven numbers (six plus extra),
+ * turnover, and for each "1st Prize" to "7th Prize" the first two figures after it (winning units, prize per unit).
+ * Anything it cannot find is left out; the admin checks the filled form before saving.
+ */
+export function parseResultText(text: string): PastedResult {
+  const out: PastedResult = { numbers: [], prizes: [] };
+  const no = /\b(\d{2})\s*\/\s*(\d{3})\b/.exec(text);
+  if (no) out.drawNo = `${no[1]}/${no[2]}`;
+  const tokens = text.split(/[\s,+]+/).filter((t) => t && !/^(extra|numbers?)$/i.test(t));
+  for (let i = 0; i + 7 <= tokens.length && !out.numbers.length; i++) {
+    const run = tokens.slice(i, i + 7);
+    if (run.every((t) => /^\d{1,2}$/.test(t) && isBall(Number(t))) && new Set(run).size === 7) {
+      out.numbers = run.slice(0, 6).map(Number);
+      out.extra = Number(run[6]);
+    }
+  }
+  const turnover = /turn\s*over[^\d]*([\d,]+)/i.exec(text);
+  if (turnover) out.turnover = turnover[1].replace(/,/g, '');
+  const parts = text.split(/(\b[1-7])(?:st|nd|rd|th)\s+prize/i);
+  // parts: [before, "1", after1, "2", after2, ...]
+  for (let i = 1; i + 1 < parts.length; i += 2) {
+    const figures = [...parts[i + 1].matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => m[0].replace(/,/g, ''));
+    if (figures.length >= 2) out.prizes.push({ division: Number(parts[i]), winners: figures[0], prize: figures[1].split('.')[0] });
+  }
+  return out;
+}
