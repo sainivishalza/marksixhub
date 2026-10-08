@@ -517,17 +517,17 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
               Confirm your email to submit orders. We sent you a link; <Link href="/account" className="underline underline-offset-4">ask for another in My account</Link>.
             </p>
           ) : null}
-          <Button className="mt-2 max-sm:w-full" onClick={place} disabled={!orders.length || placing || !wallet.drawNo || !wallet.verified}>
+          <Button className="mt-2 max-sm:hidden" onClick={place} disabled={!orders.length || placing || !wallet.drawNo || !wallet.verified}>
             <Ticket aria-hidden className="h-4 w-4" />
             {placing ? 'Submitting...' : orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'} (${cost(orders)} points)` : 'Submit order'}
           </Button>
-          <p className="mt-2 text-xs text-mute">Points are taken when you submit. Your order shows as Pending in My account until the admin approves it, then Accepted until the result.</p>
+          <p className="mt-2 text-xs text-mute">Points are taken when you submit. Your order shows as Pending in My account until the admin approves it, then Accepted until the result. Points are free play credits with no cash value.</p>
         </div>
       ) : (
         <div className="mt-4 rounded-xl border border-gold/30 p-3">
-          <p className="text-sm text-mute">Log in or create a free account to submit your numbers. Your tickets are kept while you do.</p>
+          <p className="text-sm text-mute">Log in or create a free account to submit your numbers. Your tickets are kept while you do. Points are free play credits with no cash value.</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <Button className="max-sm:w-full" onClick={submitAsGuest} disabled={!orders.length}>
+            <Button className="max-sm:hidden" onClick={submitAsGuest} disabled={!orders.length}>
               <Ticket aria-hidden className="h-4 w-4" />
               {orders.length ? `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'}` : 'Submit order'}
             </Button>
@@ -535,6 +535,18 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
           </div>
         </div>
       )}
+
+      {orders.length ? (
+        <>
+          <div className="h-16 sm:hidden" aria-hidden />
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line/60 bg-night/95 p-3 backdrop-blur sm:hidden">
+            <Button className="w-full" onClick={wallet ? place : submitAsGuest} disabled={placing || (wallet ? !wallet.drawNo || !wallet.verified : false)}>
+              <Ticket aria-hidden className="h-4 w-4" />
+              {placing ? 'Submitting...' : `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'}${wallet ? ` (${cost(orders)} points)` : ''}`}
+            </Button>
+          </div>
+        </>
+      ) : null}
 
       <p role="status" aria-live="polite" className="mt-3 min-h-[1.25rem] text-sm text-mute">
         {status}

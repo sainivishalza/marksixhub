@@ -41,7 +41,7 @@ export default async function DashboardPage() {
         <StatCard label="Orders today" value={d.ordersToday} hint={`${d.ticketsToday} tickets`} />
         <StatCard label="Points held by users" value={d.pointsHeld} />
         <StatCard label="Points paid as winnings" value={d.pointsWon} hint="All time" />
-        <StatCard label="Page views" value="Not tracked" hint="Add Plausible or Umami for visitor stats" className="col-span-2 lg:col-span-1" />
+        <StatCard label="Page views" value={process.env.PLAUSIBLE_DOMAIN ? "Plausible" : "Not tracked"} hint={process.env.PLAUSIBLE_DOMAIN ? "See plausible.io for visitor stats" : "Set PLAUSIBLE_DOMAIN to turn on visitor stats"} className="col-span-2 lg:col-span-1" />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[2fr_1fr]">

@@ -33,3 +33,22 @@ export function notifyOrders(kind: 'accepted' | 'rejected', ids: number[]): void
     }
   })().catch((err) => console.error('order mail failed:', err));
 }
+
+/** Emails players whose tickets just won. `wins` maps user id to the points won per draw in this settlement. */
+export function notifyWins(wins: Map<number, Map<string, number>>): void {
+  if (!wins.size || !mailConfigured) return;
+  void (async () => {
+    const ids = [...wins.keys()];
+    const users = await query<RowDataPacket & { id: number; email: string }>(`SELECT id, email FROM users WHERE id IN (${ids.map(() => '?').join(',')})`, ids);
+    for (const u of users) {
+      for (const [drawNo, points] of wins.get(u.id) ?? []) {
+        await sendMail(u.email, `You won ${points} points in draw ${drawNo}`, `Good news: your tickets for draw ${drawNo} won ${points} points. They are already in your balance.
+
+See your orders:
+${BASE_URL}/account
+
+Points are free play credits with no cash value.`);
+      }
+    }
+  })().catch((err) => console.error('win mail failed:', err));
+}
