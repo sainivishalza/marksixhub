@@ -5,7 +5,7 @@ import { DrawForm } from '@/components/admin/draw-form';
 import { PageHeader } from '@/components/admin/ui';
 import { toggleDrawStatusAction } from '@/actions/admin';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { getDrawChecklist, getDrawFull, previewPayout } from '@/lib/admin-data';
+import { getDrawChecklist, getDrawFull, getLastPrizes, previewPayout } from '@/lib/admin-data';
 import { requireRole } from '@/lib/auth';
 import { parseNumbers } from '@/lib/mark6';
 
@@ -66,7 +66,8 @@ export default async function EditDrawPage({ params, searchParams }: { params: P
           ) : null}
         </form>
       ) : null}
-      <DrawForm draw={found.draw} prizes={found.prizes} />
+      {/* A valid preview fills the result boxes below, so the numbers are typed once. */}
+      <DrawForm draw={preview && !published ? { ...found.draw, numbers: previewNums, extra: previewExtra } : found.draw} prizes={found.prizes} lastPrizes={published ? undefined : await getLastPrizes()} />
     </>
   );
 }

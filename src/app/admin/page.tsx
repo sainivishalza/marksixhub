@@ -1,16 +1,18 @@
 import Link from 'next/link';
 import { Panel, PageHeader, StatCard } from '@/components/admin/ui';
+import { Countdown } from '@/components/countdown';
 import { PicksChart } from '@/components/admin/picks-chart';
 import { buttonVariants } from '@/components/ui/button';
 import { getAlerts, getDashboard } from '@/lib/admin-data';
 import { requireRole } from '@/lib/auth';
 import { can } from '@/lib/perms';
+import { openDraw } from '@/lib/points';
 
 export const metadata = { title: 'Dashboard' };
 
 export default async function DashboardPage() {
   const user = await requireRole('view');
-  const [d, alerts] = await Promise.all([getDashboard(), can(user.role, 'manage') ? getAlerts() : Promise.resolve([])]);
+  const [d, alerts, open] = await Promise.all([getDashboard(), can(user.role, 'manage') ? getAlerts() : Promise.resolve([]), openDraw()]);
   return (
     <>
       <PageHeader title="Dashboard" description="A quick look at the site today.">
@@ -18,6 +20,13 @@ export default async function DashboardPage() {
           <Link href="/admin/draws/new" className={buttonVariants({ size: 'md' })}>Add draw or result</Link>
         ) : null}
       </PageHeader>
+
+      {open ? (
+        <section aria-label="Next draw" className="mb-4 rounded-2xl border border-line bg-panel/70 p-4">
+          <p className="mb-2 text-sm text-mute">Ordering for draw {open.drawNo} closes in</p>
+          <Countdown target={open.closesAt.toISOString()} />
+        </section>
+      ) : null}
 
       {d.pendingOrders > 0 ? (
         <Link href="/admin/orders?status=pending" className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-gold/50 bg-raised/60 p-4 hover:border-gold">

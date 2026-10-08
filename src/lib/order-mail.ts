@@ -52,3 +52,12 @@ Points are free play credits with no cash value.`);
     }
   })().catch((err) => console.error('win mail failed:', err));
 }
+
+/** Tells the site owner a new order is waiting. Only when ORDER_ALERT_EMAIL is set and mail works. */
+export function notifyNewOrder(orderNo: string, drawNo: string, tickets: number): void {
+  const to = (process.env.ORDER_ALERT_EMAIL || '').trim();
+  if (!to || !mailConfigured) return;
+  void sendMail(to, `New order ${orderNo}`, `A new order is waiting for approval: ${orderNo}, draw ${drawNo}, ${tickets} ticket${tickets === 1 ? '' : 's'}.
+
+${BASE_URL}/admin/orders?status=pending`).catch((err) => console.error('order alert failed:', err));
+}

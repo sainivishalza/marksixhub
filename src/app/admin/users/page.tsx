@@ -39,6 +39,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
       <AdminTable
         caption="Users"
         head={['Email', 'Role', 'Joined', 'Last login', 'Saved sets', 'Points', 'Currency']}
+        wide={['Role', 'Points']}
         empty={users.length === 0 ? <p className="p-6 text-sm text-mute">No users match.</p> : null}
       >
         {users.map((u) => (

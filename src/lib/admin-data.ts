@@ -88,6 +88,14 @@ export async function getDrawFull(id: number): Promise<{ draw: Draw; prizes: Pri
   return { draw: toDraw(rows[0]), prizes: prizes.map((p) => ({ division: p.division, winners: num(p.winners), prizeHkd: num(p.prize_hkd) })) };
 }
 
+/** Prizes of the latest published draw, so a new result can start from them ("copy last draw"). */
+export async function getLastPrizes(): Promise<Prize[]> {
+  const rows = await query<RowDataPacket & { division: number; winners: number; prize_hkd: number | string }>(
+    "SELECT division, winners, prize_hkd FROM draw_prizes WHERE draw_id = (SELECT id FROM draws WHERE status='published' ORDER BY draw_date DESC, id DESC LIMIT 1) ORDER BY division",
+  );
+  return rows.map((p) => ({ division: p.division, winners: num(p.winners), prizeHkd: num(p.prize_hkd) }));
+}
+
 export async function listAllEvents(): Promise<(EventItem & { active: boolean })[]> {
   const rows = await query<RowDataPacket & { id: number; title: string; event_date: string; body: string; active: number }>(
     'SELECT id, title, event_date, body, active FROM events ORDER BY event_date DESC LIMIT 200',

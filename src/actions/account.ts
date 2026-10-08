@@ -16,6 +16,7 @@ import { mailConfigured, sendMail } from '@/lib/mail';
 import { makeOrderNo } from '@/lib/receipt';
 import { findVerification, markVerified, sendVerification, useVerification } from '@/lib/verify';
 import { addPoints, openDraw } from '@/lib/points';
+import { notifyNewOrder } from '@/lib/order-mail';
 import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
 import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
@@ -143,6 +144,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
     return { points: Number(u.points), orderId, orderNo };
   });
   if (left === null) return { ok: false, message: `You need ${cost} points for ${label}. Claim your free daily points in My account.` };
+  notifyNewOrder(left.orderNo, next.draw_no, total);
   revalidatePath('/account', 'layout');
   return { ok: true, points: left.points, orderId: left.orderId, message: `Order ${left.orderNo} submitted: ${label} for draw ${next.draw_no}. ${cost} points taken, ${left.points} left. Your receipt is issued when the admin accepts it.` };
 }

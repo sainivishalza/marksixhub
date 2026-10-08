@@ -101,6 +101,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <AdminTable
             caption={`Orders for draw ${current.drawNo}`}
             head={['Order', 'User', 'Placed (UTC)', 'Status', 'Points', 'Numbers', '']}
+            wide={['Numbers']}
             empty={shown.length === 0 ? <p className="p-6 text-sm text-mute">{orders.length === 0 ? 'No orders for this draw yet.' : 'No orders match this filter.'}</p> : null}
           >
             {shown.map((o) => (

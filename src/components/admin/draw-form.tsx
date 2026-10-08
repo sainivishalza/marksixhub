@@ -28,12 +28,13 @@ function StopSelling({ initial }: { initial: string }) {
   );
 }
 
-export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: Prize[]; suggestedNo?: string }) {
+export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Draw; prizes?: Prize[]; lastPrizes?: Prize[]; suggestedNo?: string }) {
   const [state, action] = useActionState(saveDrawAction, none);
   const raw = state.raw;
   // After a failed save, show what the person typed; otherwise show the saved draw.
   const val = (name: string, fallback: string | number | null | undefined) => raw?.[name] ?? (fallback ?? '').toString();
-  const prize = (division: number) => prizes?.find((p) => p.division === division);
+  const [copied, setCopied] = useState(false);
+  const prize = (division: number) => (copied ? lastPrizes : prizes)?.find((p) => p.division === division);
 
   return (
     <form action={action} className="max-w-4xl">
@@ -96,7 +97,12 @@ export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: 
             <span>Winning units</span>
             <span>Prize per unit (HK$)</span>
           </div>
-          <div className="divide-y divide-line/40">
+          {lastPrizes?.length ? (
+            <button type="button" onClick={() => setCopied(true)} className="mb-2 text-sm text-gold-bright underline-offset-4 hover:underline">
+              Copy prizes from the last published draw
+            </button>
+          ) : null}
+          <div key={copied ? 'copied' : 'saved'} className="divide-y divide-line/40">
             {DIVISION_LABEL.map((label, i) => {
               const n = i + 1;
               return (
