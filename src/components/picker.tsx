@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, useTransition, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -539,12 +540,16 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       {orders.length ? (
         <>
           <div className="h-16 sm:hidden" aria-hidden />
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line/60 bg-night/95 p-3 backdrop-blur sm:hidden">
-            <Button className="w-full" onClick={wallet ? place : submitAsGuest} disabled={placing || (wallet ? !wallet.drawNo || !wallet.verified : false)}>
-              <Ticket aria-hidden className="h-4 w-4" />
-              {placing ? 'Submitting...' : `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'}${wallet ? ` (${cost(orders)} points)` : ''}`}
-            </Button>
-          </div>
+          {/* In the body: an ancestor with backdrop-blur would otherwise turn "fixed" into "stuck to that box". */}
+          {createPortal(
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line/60 bg-night/95 p-3 backdrop-blur sm:hidden">
+              <Button className="w-full" onClick={wallet ? place : submitAsGuest} disabled={placing || (wallet ? !wallet.drawNo || !wallet.verified : false)}>
+                <Ticket aria-hidden className="h-4 w-4" />
+                {placing ? 'Submitting...' : `Submit order: ${orders.length} ticket${orders.length === 1 ? '' : 's'}${wallet ? ` (${cost(orders)} points)` : ''}`}
+              </Button>
+            </div>,
+            document.body,
+          )}
         </>
       ) : null}
 
