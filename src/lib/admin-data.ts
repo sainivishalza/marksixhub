@@ -54,6 +54,12 @@ export async function getDashboard() {
   };
 }
 
+/** Orders waiting for approval across all draws (menu badge and dashboard). */
+export async function countPendingOrders(): Promise<number> {
+  const [row] = await query<Count>("SELECT COUNT(*) AS n FROM orders WHERE status='pending' AND refunded=0");
+  return num(row.n);
+}
+
 /** The draw number after the latest one (26/106 becomes 26/107), to save typing. Empty if there are no draws yet. */
 export async function suggestNextDrawNo(): Promise<string> {
   const rows = await query<RowDataPacket & { draw_no: string }>('SELECT draw_no FROM draws ORDER BY draw_date DESC, id DESC LIMIT 1');

@@ -25,7 +25,12 @@ const NAV: { href: string; label: string; icon: typeof Gauge; level: Level }[] =
 
 const menuLink = 'flex items-center gap-3 rounded-xl px-3 py-3 text-base text-mute hover:bg-raised hover:text-ivory';
 
-export function AdminShell({ user, children }: { user: { email: string; role: Role }; children: ReactNode }) {
+/** Small count bubble for the Orders link: how many orders wait for approval. */
+function Badge({ n }: { n: number }) {
+  return n > 0 ? <span className="ml-auto rounded-full bg-gold px-1.5 text-xs font-semibold leading-5 text-night" aria-label={`${n} waiting`}>{n > 99 ? '99+' : n}</span> : null;
+}
+
+export function AdminShell({ user, pending = 0, children }: { user: { email: string; role: Role }; pending?: number; children: ReactNode }) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [open, setOpen] = useState(false);
@@ -65,7 +70,8 @@ export function AdminShell({ user, children }: { user: { email: string; role: Ro
             <p className="text-xs leading-none text-mute">Admin</p>
             <p className="truncate font-serif text-lg leading-tight text-ivory">{here}</p>
           </div>
-          <span className="ml-auto rounded-md bg-raised px-2 py-1 text-xs text-gold-bright">{user.role}</span>
+          {pending > 0 ? <Link href="/admin/orders" className="ml-auto rounded-md bg-gold px-2 py-1 text-xs font-semibold text-night">{pending} pending</Link> : null}
+          <span className={cn('rounded-md bg-raised px-2 py-1 text-xs text-gold-bright', pending === 0 && 'ml-auto')}>{user.role}</span>
         </header>
         {open ? (
           <div id="admin-menu" className="fixed inset-x-0 bottom-0 top-[3.8rem] z-20 overflow-y-auto bg-night p-4">
@@ -92,6 +98,7 @@ export function AdminShell({ user, children }: { user: { email: string; role: Ro
                 >
                   <Icon aria-hidden className="h-4 w-4 shrink-0 text-gold" />
                   <span className="min-w-0 truncate">{label}</span>
+                  {href === '/admin/orders' ? <Badge n={pending} /> : null}
                 </Link>
               ))}
             </nav>
@@ -137,6 +144,7 @@ export function AdminShell({ user, children }: { user: { email: string; role: Ro
             >
               <Icon aria-hidden className="h-4 w-4 shrink-0" />
               <span className={cn(collapsed && 'md:sr-only')}>{label}</span>
+              {href === '/admin/orders' && !collapsed ? <Badge n={pending} /> : null}
             </Link>
           ))}
         </nav>

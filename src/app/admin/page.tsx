@@ -19,6 +19,13 @@ export default async function DashboardPage() {
         ) : null}
       </PageHeader>
 
+      {d.pendingOrders > 0 ? (
+        <Link href="/admin/orders?status=pending" className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-gold/50 bg-raised/60 p-4 hover:border-gold">
+          <span className="text-ivory"><span className="font-mono text-2xl text-gold-bright">{d.pendingOrders}</span> order{d.pendingOrders === 1 ? '' : 's'} waiting for approval</span>
+          <span className="text-sm text-gold-bright">Review →</span>
+        </Link>
+      ) : null}
+
       {alerts.length ? (
         <section aria-label="Alerts" className="mb-6 rounded-2xl border border-miss/40 bg-miss/10 p-4">
           <h2 className="mb-2 text-lg text-miss">Needs a look</h2>

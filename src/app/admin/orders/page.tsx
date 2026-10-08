@@ -11,16 +11,26 @@ import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Orders' };
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ draw?: string; ok?: string; error?: string }> }) {
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'accepted', label: 'Accepted' },
+  { key: 'rejected', label: 'Rejected / refunded' },
+];
+
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ draw?: string; status?: string; ok?: string; error?: string }> }) {
   const me = await requireRole('view');
   const draws = await listDrawNos();
-  const { draw: wanted, ok, error } = await searchParams;
+  const { draw: wanted, status: wantedStatus, ok, error } = await searchParams;
   const current = draws.find((d) => d.drawNo === wanted) ?? draws.find((d) => d.status === 'upcoming') ?? draws[0];
   const { orders, freq, ticketCount } = current ? await getDrawOrders(current.drawNo) : { orders: [], freq: [] as number[], ticketCount: 0 };
   const winning = current?.nums ? parseNumbers(current.nums) : [];
   const max = Math.max(1, ...freq.slice(1));
   const points = orders.filter((o) => !o.refunded).reduce((a, o) => a + o.points, 0);
   const pending = orders.filter((o) => o.status === 'pending').length;
+  const filter = FILTERS.find((f) => f.key === wantedStatus) ?? FILTERS[0];
+  const shown = filter.key === 'all' ? orders : orders.filter((o) => (filter.key === 'rejected' ? o.status === 'rejected' || o.status === 'refunded' : o.status === filter.key));
+  const countOf = (key: string) => (key === 'all' ? orders.length : orders.filter((o) => (key === 'rejected' ? o.status === 'rejected' || o.status === 'refunded' : o.status === key)).length);
   const canAct = can(me.role, 'support') && current?.status === 'upcoming';
 
   return (
@@ -75,12 +85,25 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             </ol>
           </Panel>
 
+          <nav aria-label="Filter orders" className="mb-3 flex flex-wrap gap-2">
+            {FILTERS.map((f) => (
+              <Link
+                key={f.key}
+                href={`/admin/orders?draw=${encodeURIComponent(current.drawNo)}&status=${f.key}`}
+                aria-current={f.key === filter.key ? 'true' : undefined}
+                className={cn('rounded-full border px-3.5 py-2 text-sm', f.key === filter.key ? 'border-gold bg-raised text-gold-bright' : 'border-line text-mute hover:border-gold/60 hover:text-ivory')}
+              >
+                {f.label} <span className="font-mono text-xs">{countOf(f.key)}</span>
+              </Link>
+            ))}
+          </nav>
+
           <AdminTable
             caption={`Orders for draw ${current.drawNo}`}
             head={['Order', 'User', 'Placed (UTC)', 'Status', 'Points', 'Numbers', '']}
-            empty={orders.length === 0 ? <p className="p-6 text-sm text-mute">No orders for this draw yet.</p> : null}
+            empty={shown.length === 0 ? <p className="p-6 text-sm text-mute">{orders.length === 0 ? 'No orders for this draw yet.' : 'No orders match this filter.'}</p> : null}
           >
-            {orders.map((o) => (
+            {shown.map((o) => (
               <tr key={o.id} className="align-top">
                 <th scope="row" className="px-4 py-3 font-mono">{o.orderNo}</th>
                 <td className="max-w-[14rem] truncate px-4 py-3">{o.email}</td>

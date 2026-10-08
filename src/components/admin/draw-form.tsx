@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { saveDrawAction, type DrawFormState } from '@/actions/admin';
 import { Field, inputClass, Panel } from '@/components/admin/ui';
 import { NumberBoxes } from '@/components/number-boxes';
@@ -12,6 +12,21 @@ import type { Draw, Prize } from '@/lib/types';
 
 const none: DrawFormState = {};
 const money = `${inputClass} font-mono`;
+
+/** "21:15" as "9:15 PM", so a morning/evening mix-up is visible; warns for times before noon (draws close in the evening). */
+function StopSelling({ initial }: { initial: string }) {
+  const [time, setTime] = useState(initial);
+  const [h, m] = time.split(':').map(Number);
+  const ok = time !== '' && Number.isFinite(h);
+  const label = ok ? `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` : '';
+  return (
+    <Field label="Stop selling time" hint="Hong Kong time, like 21:15 for 9:15 PM">
+      <input type="time" name="stop_selling" value={time} onChange={(e) => setTime(e.target.value)} className={inputClass} />
+      {ok ? <span className="mt-1 block text-sm text-ivory">{label} Hong Kong time</span> : null}
+      {ok && h < 12 ? <span role="alert" className="mt-1 block text-sm text-miss">This is a morning time. Draws close in the evening: did you mean {String(h + 12).padStart(2, '0')}:{String(m).padStart(2, '0')}?</span> : null}
+    </Field>
+  );
+}
 
 export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: Prize[]; suggestedNo?: string }) {
   const [state, action] = useActionState(saveDrawAction, none);
@@ -36,9 +51,7 @@ export function DrawForm({ draw, prizes, suggestedNo }: { draw?: Draw; prizes?: 
             <Field label="Draw date">
               <input type="date" name="draw_date" required defaultValue={val('draw_date', draw?.drawDate)} className={inputClass} />
             </Field>
-            <Field label="Stop selling time" hint="Hong Kong time, like 21:15 for 9:15 PM">
-              <input type="time" name="stop_selling" defaultValue={val('stop_selling', draw?.stopSelling)} className={inputClass} />
-            </Field>
+            <StopSelling initial={val('stop_selling', draw?.stopSelling)} />
             <Field label="Turnover (HK$)">
               <input name="turnover_hkd" inputMode="numeric" placeholder="14675740" defaultValue={val('turnover_hkd', draw?.turnoverHkd)} className={money} />
             </Field>
