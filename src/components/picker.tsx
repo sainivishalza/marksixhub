@@ -15,7 +15,7 @@ import type { Currency, Prize } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type LatestDraw = { drawNo: string; numbers: number[]; extra: number | null };
-type Props = { latest: LatestDraw | null; prizes: Prize[]; currency: Currency; wallet?: Wallet | null; id?: string };
+type Props = { latest: LatestDraw | null; nextNo?: string | null; prizes: Prize[]; currency: Currency; wallet?: Wallet | null; id?: string };
 type Wallet = { points: number; cost: number; drawNo: string | null; closesAt: string | null; favourites: Favourite[]; unseenWins: number; verified: boolean };
 
 const PICK = 6;
@@ -34,7 +34,7 @@ function left(iso: string, now: number) {
   return d ? `${d}d ${h}h left` : h ? `${h}h ${mins % 60}m left` : `${mins}m left`;
 }
 
-export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }: Props) {
+export function Picker({ latest, nextNo = null, prizes, currency, wallet = null, id = 'board' }: Props) {
   const [placing, startPlacing] = useTransition();
   const router = useRouter();
   const [receipt, setReceipt] = useState<number | null>(null);
@@ -291,13 +291,16 @@ export function Picker({ latest, prizes, currency, wallet = null, id = 'board' }
       }
     });
 
+  // These numbers are for the next draw. The last draw is already over, so it is shown only as a "would have won" comparison.
+  const target = wallet?.drawNo ?? nextNo;
   const verdict = (() => {
     if (mode !== 'single' || !complete || !latest) return null;
     const ev = evaluate(sorted, latest.numbers, latest.extra);
+    const head = target ? `Your numbers are for draw ${target}. ` : '';
     if (ev.division === null)
-      return `Against draw ${latest.drawNo}: ${ev.matches} matching number${ev.matches === 1 ? '' : 's'}${ev.extraHit ? ' and the extra' : ''}. No prize.`;
+      return `${head}Last draw ${latest.drawNo} (already played): ${ev.matches} matching number${ev.matches === 1 ? '' : 's'}${ev.extraHit ? ' and the extra' : ''}, no prize.`;
     const prize = prizes.find((p) => p.division === ev.division);
-    return `Against draw ${latest.drawNo}: ${DIVISION_LABEL[ev.division - 1]} prize${prize && prize.prizeHkd ? `, ${money(prize.prizeHkd, currency)}` : ''}.`;
+    return `${head}Last draw ${latest.drawNo} (already played): would have won ${DIVISION_LABEL[ev.division - 1]} prize${prize && prize.prizeHkd ? `, ${money(prize.prizeHkd, currency)}` : ''}.`;
   })();
 
   return (

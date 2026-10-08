@@ -80,6 +80,7 @@ export default async function HomePage() {
         <div className="min-w-0">
           <Picker
             latest={latest ? { drawNo: latest.drawNo, numbers: latest.numbers, extra: latest.extra } : null}
+            nextNo={next?.drawNo ?? null}
             prizes={prizes}
             currency={current}
             wallet={user ? await walletFor(user.id, settings.ticketPoints) : null}
