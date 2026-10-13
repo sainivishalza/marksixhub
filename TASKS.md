@@ -64,4 +64,4 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Mobile: home hero, admin chart and admin order header no longer overflow at 320px; footer links are 36px+ tall; mobile menu, favicon.ico + apple-icon, custom 404 with header/footer, clickable site name and email (CONTACT_EMAIL) and optional tap-to-call phone (CONTACT_PHONE) in the footer, Privacy and Terms pages, XML sitemap link removed.
 - [x] Messages: daily-claim result, welcome after sign-up, logged-out notice. Axe fixes (jackpot role, picker group, FAQ/orders heading order). Icons cached one week.
 - [x] Re-audited on the final build: no horizontal overflow on 29 pages at 320/390/768px (jackpot figure shrunk on very small phones), axe clean on public, account and admin pages (the admin "no h1" was the loading skeleton being scanned too early; one admin link now underlined), picker e2e updated for the Add to slip flow.
-- [ ] Open for the owner: set CONTACT_PHONE if wanted; review Privacy/Terms text.
+- [ ] Open for the owner: review Privacy/Terms text (owner chose no public phone number; CONTACT_PHONE stays empty).
