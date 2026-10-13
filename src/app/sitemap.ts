@@ -7,7 +7,7 @@ import { drawSlug, type Draw } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const pages = ['/', '/picker', '/results', '/guide', '/faq', '/statistics', '/check'].map((p) => ({ url: absolute(p) }));
+  const pages = ['/', '/picker', '/results', '/guide', '/faq', '/statistics', '/check', '/leaderboard', '/privacy', '/terms'].map((p) => ({ url: absolute(p) }));
   let draws: Draw[] = [];
   try {
     // Only the free window is listed: the older results are not public pages.

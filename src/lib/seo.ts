@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 
 export const SITE_NAME = 'Mark Six Hub';
+export const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'info@marksixhub.com';
+/** Optional. Shown (and tap-to-call) in the footer only when set. */
+export const CONTACT_PHONE = process.env.CONTACT_PHONE || '';
+
 export const BASE_URL = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Any site served from staging.* is a test copy and must stay out of search results.
