@@ -115,17 +115,20 @@ export function boxNumbers(cells: string[]): number[] {
   return out;
 }
 
-export type PastedResult = { drawNo?: string; numbers: number[]; extra?: number; turnover?: string; prizes: { division: number; winners: string; prize: string }[] };
+export type PastedResult = { drawNo?: string; date?: string; numbers: number[]; extra?: number; turnover?: string; prizes: { division: number; winners: string; prize: string }[] };
 
 /**
- * Reads text copied from a results page: draw number, the first run of seven numbers (six plus extra),
- * turnover, and for each "1st Prize" to "7th Prize" the first two figures after it (winning units, prize per unit).
- * Anything it cannot find is left out; the admin checks the filled form before saving.
+ * Reads text copied from a results page (or text taken out of its printed PDF): draw number, date, the first run of
+ * seven numbers (six plus extra), turnover, and for each of the seven prizes its amount and winning units.
+ * Works for "1st Prize 2.0 $14,072,930" and for the results page layout "1st $14,072,930" with the units in a
+ * separate column. Anything it cannot find is left out; the admin checks the filled form before saving.
  */
 export function parseResultText(text: string): PastedResult {
   const out: PastedResult = { numbers: [], prizes: [] };
   const no = /\b(\d{2})\s*\/\s*(\d{3})\b/.exec(text);
   if (no) out.drawNo = `${no[1]}/${no[2]}`;
+  const date = /\b(\d{2})\/(\d{2})\/(\d{4})\b/.exec(text);
+  if (date) out.date = `${date[3]}-${date[2]}-${date[1]}`;
   const tokens = text.split(/[\s,+]+/).filter((t) => t && !/^(extra|numbers?)$/i.test(t));
   for (let i = 0; i + 7 <= tokens.length && !out.numbers.length; i++) {
     const run = tokens.slice(i, i + 7);
@@ -136,11 +139,32 @@ export function parseResultText(text: string): PastedResult {
   }
   const turnover = /turn\s*over[^\d]*([\d,]+)/i.exec(text);
   if (turnover) out.turnover = turnover[1].replace(/,/g, '');
-  const parts = text.split(/(\b[1-7])(?:st|nd|rd|th)\s+prize/i);
-  // parts: [before, "1", after1, "2", after2, ...]
-  for (let i = 1; i + 1 < parts.length; i += 2) {
-    const figures = [...parts[i + 1].matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => m[0].replace(/,/g, ''));
-    if (figures.length >= 2) out.prizes.push({ division: Number(parts[i]), winners: figures[0], prize: figures[1].split('.')[0] });
+
+  // Each "1st" to "7th" owns the text up to the next one: the first $ figure is its prize, the first plain figure its winning units.
+  const marks = [...text.matchAll(/\b([1-7])(?:st|nd|rd|th)\b(?:\s+prize)?/gi)];
+  const found = new Map<number, { winners?: string; prize?: string }>();
+  marks.forEach((m, i) => {
+    const division = Number(m[1]);
+    if (found.has(division)) return;
+    // A "Winning Unit" label starts a separate units column: those figures belong to the column, not to this prize.
+    const seg = text.slice(m.index + m[0].length, marks[i + 1]?.index ?? text.length).split(/winning\s*unit/i)[0];
+    const figs = [...seg.matchAll(/(\$\s*)?(\d[\d,]*(?:\.\d+)?)/g)].map((f) => ({ dollar: Boolean(f[1]), v: f[2].replace(/,/g, '') }));
+    const dollar = figs.find((f) => f.dollar);
+    const plain = figs.filter((f) => !f.dollar);
+    const prize = dollar?.v ?? plain[1]?.v;
+    if (prize !== undefined) found.set(division, { prize: prize.split('.')[0], winners: plain[0]?.v });
+  });
+  // Units listed in their own column (after the amounts): one-decimal figures, in prize order.
+  const columns = [...text.matchAll(/(?<![\d$,.])\d[\d,]*\.\d(?!\d)/g)].map((m) => m[0].replace(/,/g, ''));
+  const missing = [...found.entries()].filter(([, v]) => v.winners === undefined).map(([d]) => d).sort((a, b) => a - b);
+  if (missing.length && columns.length === found.size) {
+    [...found.keys()].sort((a, b) => a - b).forEach((d, i) => {
+      const v = found.get(d);
+      if (v && v.winners === undefined) v.winners = columns[i];
+    });
+  }
+  for (const [division, v] of [...found.entries()].sort((a, b) => a[0] - b[0])) {
+    if (v.winners !== undefined && v.prize !== undefined) out.prizes.push({ division, winners: v.winners, prize: v.prize });
   }
   return out;
 }

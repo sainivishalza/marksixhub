@@ -46,6 +46,7 @@ export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Dra
     if (r.extra) next.extra = String(r.extra);
     if (r.turnover) next.turnover_hkd = r.turnover;
     if (r.drawNo && !draw) next.draw_no = r.drawNo;
+    if (r.date && !draw) next.draw_date = r.date;
     for (const p of r.prizes) {
       next[`w${p.division}`] = p.winners;
       next[`p${p.division}`] = p.prize;
@@ -54,7 +55,9 @@ export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Dra
     setFill((f) => ({ ...f, ...next }));
     setFillN((n) => n + 1);
     const mismatch = draw && r.drawNo && r.drawNo !== draw.drawNo ? ` Warning: the text is for draw ${r.drawNo}, but this is draw ${draw.drawNo}.` : '';
-    setFound(`Filled: ${r.numbers.length ? 'winning numbers' : 'no numbers'}${r.extra ? ', extra' : ''}${r.turnover ? ', turnover' : ''}, ${r.prizes.length} prize ${r.prizes.length === 1 ? 'row' : 'rows'}. Check every box against the official result, then set the status and save.${mismatch}`);
+    const parts = [r.numbers.length ? 'winning numbers' : '', r.extra ? 'extra' : '', r.turnover ? 'turnover' : '', r.prizes.length ? `${r.prizes.length} prize ${r.prizes.length === 1 ? 'row' : 'rows'}` : ''].filter(Boolean);
+    const noNumbers = r.numbers.length ? '' : ' The winning numbers were not in the text (a PDF or print shows them as pictures): type them in.';
+    setFound(`Filled: ${parts.join(', ')}. Check every box against the official result, then set the status and save.${noNumbers}${mismatch}`);
   }
   const [copied, setCopied] = useState(false);
   const prize = (division: number) => (copied ? lastPrizes : prizes)?.find((p) => p.division === division);
