@@ -72,7 +72,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 'Result not published yet. '
               )}
               <span className="font-mono text-ivory">{orders.length}</span> orders, <span className="font-mono text-ivory">{ticketCount}</span> tickets, <span className="font-mono text-ivory">{points}</span> points spent.{' '}
-              <Link href={`/admin/draws`} className="text-gold-bright underline-offset-4 hover:underline">Draws</Link>
+              <Link href={`/admin/draws`} className="text-gold-bright underline underline-offset-4">Draws</Link>
             </p>
             <h3 className="mb-2 mt-5 text-sm text-mute">Times each number was picked</h3>
             <ol className="grid grid-cols-7 gap-1.5 sm:grid-cols-10" aria-label="Pick counts per number">
