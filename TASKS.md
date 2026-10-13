@@ -59,3 +59,8 @@ Todo (in order):
 4. Later: guide posts (MDX), logo upload and brand colours (needs file storage), page-view analytics (Plausible/Umami), forgot-password (needs email)
 
 Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (not 4), no "extra number" in the picker, real Mark Six ball colours, no SearchAction schema (no site search exists), "Free to use" instead of "Free forever", no notification bell (nothing to notify), page views not tracked yet.
+
+## Site quality pass (20 items) — deployed to main at 71c09ef
+- [x] Mobile: home hero, admin chart and admin order header no longer overflow at 320px; footer links are 36px+ tall; mobile menu, favicon.ico + apple-icon, custom 404 with header/footer, clickable site name and email (CONTACT_EMAIL) and optional tap-to-call phone (CONTACT_PHONE) in the footer, Privacy and Terms pages, XML sitemap link removed.
+- [x] Messages: daily-claim result, welcome after sign-up, logged-out notice. Axe fixes (jackpot role, picker group, FAQ/orders heading order). Icons cached one week.
+- [ ] Open: update the picker e2e check "guest sees Submit order before picking" (button now appears after Add to slip); axe says admin dashboard/orders lack an h1 on mobile though PageHeader renders one (investigate); re-run the overflow/axe audit on the final build; set CONTACT_PHONE if wanted; review Privacy/Terms text.
