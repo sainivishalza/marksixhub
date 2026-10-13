@@ -64,7 +64,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <Panel title={`Draw ${current.drawNo}`} className="mb-6">
             <p className="text-sm text-mute">
               {current.status === 'published' && winning.length ? (
-                <span className="mr-3 inline-flex items-center gap-1 align-middle">
+                <span className="mr-3 inline-flex flex-wrap items-center gap-1 align-middle">
                   Winning numbers {winning.map((n) => <NumberBall key={n} n={n} size="sm" />)}
                   {current.extra ? <NumberBall n={current.extra} size="sm" extra /> : null}
                 </span>

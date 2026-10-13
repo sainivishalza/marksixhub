@@ -25,6 +25,8 @@ const config: NextConfig = {
   },
   async headers() {
     return [
+      // Icons rarely change; let browsers and CDNs keep them for a week (default is revalidate on every view).
+      { source: '/:file(favicon.ico|icon.svg|apple-icon.png)', headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }] },
       {
         source: '/(.*)',
         headers: [

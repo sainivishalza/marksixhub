@@ -16,9 +16,9 @@ export const metadata: Metadata = { title: 'My account', robots: { index: false,
 
 const hk = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Hong_Kong', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
 
-export default async function AccountOverview({ searchParams }: { searchParams: Promise<{ mail?: string; verified?: string }> }) {
+export default async function AccountOverview({ searchParams }: { searchParams: Promise<{ mail?: string; verified?: string; welcome?: string; claim?: string }> }) {
   const user = await requireUser('/account');
-  const { mail, verified } = await searchParams;
+  const { mail, verified, welcome, claim } = await searchParams;
   const [settings, open, orders] = await Promise.all([getSettings(), openDraw(), getOrders(user.id, { limit: 3 })]);
   const [me] = await query<RowDataPacket & { streak: number; done: number; cont: number }>(
     'SELECT streak, (last_claim = UTC_DATE()) AS done, (last_claim = UTC_DATE() - INTERVAL 1 DAY) AS cont FROM users WHERE id=?',
@@ -60,6 +60,10 @@ export default async function AccountOverview({ searchParams }: { searchParams: 
         <p className="mt-1 text-mute">Your points, your entries and what is happening to them.</p>
       </div>
 
+      {welcome ? <p role="status" className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm text-win">Welcome! Your account is ready.</p> : null}
+      {/^\d+$/.test(claim ?? '') ? <p role="status" className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm text-win">{claim} free points added to your balance.</p> : null}
+      {claim === 'done' ? <p role="status" className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm text-win">You already claimed today. Come back tomorrow.</p> : null}
+      {claim === 'verify' ? <p role="alert" className="rounded-xl border border-miss/40 bg-miss/10 px-4 py-3 text-sm text-miss">Confirm your email first, then claim your points.</p> : null}
       {verified ? <p role="status" className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm text-win">Email confirmed. You can place orders now.</p> : null}
       {mail === 'sent' ? <p role="status" className="rounded-xl border border-win/40 bg-win/10 px-4 py-3 text-sm text-win">A new link is on its way.</p> : null}
       {mail === 'wait' ? <p role="alert" className="rounded-xl border border-miss/40 bg-miss/10 px-4 py-3 text-sm text-miss">Too many requests. Try again in an hour.</p> : null}

@@ -24,7 +24,7 @@ export function Jackpot({ valueHkd, currency }: { valueHkd: number; currency: Cu
   }, [valueHkd, reduce]);
 
   return (
-    <span className="gold-text font-serif text-5xl font-semibold tabular-nums sm:text-6xl" aria-label={money(valueHkd, currency)}>
+    <span role="img" className="gold-text font-serif text-5xl font-semibold tabular-nums sm:text-6xl" aria-label={money(valueHkd, currency)}>
       <span aria-hidden>{money(shown, currency)}</span>
     </span>
   );

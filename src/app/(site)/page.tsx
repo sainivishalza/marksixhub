@@ -43,8 +43,8 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="mx-auto grid max-w-7xl items-start gap-10 px-4 pb-8 pt-10 sm:px-6 lg:grid-cols-[1.02fr_1fr] lg:gap-14 lg:px-8 lg:pt-16">
-        <div className="lg:pt-6">
+      <section className="mx-auto grid max-w-7xl items-start gap-10 px-4 pb-8 pt-10 grid-cols-[minmax(0,1fr)] sm:px-6 lg:grid-cols-[1.02fr_1fr] lg:gap-14 lg:px-8 lg:pt-16">
+        <div className="min-w-0 lg:pt-6">
           <h1 className="gold-text font-serif text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl">Pick your lucky 6</h1>
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-mute">
             Choose six numbers from 1 to 49, or let us pick for you. Then see how they would have done in the latest Hong Kong Mark Six draw.

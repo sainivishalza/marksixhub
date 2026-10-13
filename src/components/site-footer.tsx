@@ -25,7 +25,7 @@ export function SiteFooter({ siteName = SITE_NAME }: { siteName?: string }) {
           </p>
           <p>Play responsibly. Gambling can be addictive and is for adults only. Never spend money you cannot afford to lose.</p>
           <p>
-            Contact: <a href={`mailto:${CONTACT_EMAIL}`} className="text-gold-bright hover:underline">{CONTACT_EMAIL}</a>
+            Contact: <a href={`mailto:${CONTACT_EMAIL}`} className="inline-block py-2 text-gold-bright hover:underline">{CONTACT_EMAIL}</a>
             {CONTACT_PHONE ? (
               <>
                 {' · '}
@@ -37,7 +37,7 @@ export function SiteFooter({ siteName = SITE_NAME }: { siteName?: string }) {
         </div>
         <nav aria-label="Footer" className="flex flex-col gap-2 text-sm">
           {LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="py-1 text-mute hover:text-gold-bright">
+            <Link key={l.href} href={l.href} className="inline-block py-2 text-mute hover:text-gold-bright">
               {l.label}
             </Link>
           ))}

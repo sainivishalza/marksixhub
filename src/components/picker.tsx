@@ -390,7 +390,7 @@ export function Picker({ latest, nextNo = null, prizes, currency, wallet = null,
         })}
       </div>
 
-      <div className="mt-5 rounded-xl border border-dashed border-gold/40 bg-night/60 p-3 sm:p-4" aria-label="Your ticket">
+      <div role="group" className="mt-5 rounded-xl border border-dashed border-gold/40 bg-night/60 p-3 sm:p-4" aria-label="Your ticket">
         <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
           {Array.from({ length: PICK }, (_, i) => {
             const n = sorted[i];

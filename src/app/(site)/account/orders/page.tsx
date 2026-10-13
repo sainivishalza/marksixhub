@@ -55,7 +55,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <Link href="/picker" className={`${buttonVariants()} mt-4`}>Pick numbers</Link>
         </div>
       ) : (
-        <div className="space-y-4">{orders.map((o) => <OrderCard key={o.id} order={o} />)}</div>
+        <div className="space-y-4">
+          <h2 className="sr-only">Orders</h2>
+          {orders.map((o) => <OrderCard key={o.id} order={o} />)}
+        </div>
       )}
 
       {old.length ? (

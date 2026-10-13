@@ -11,6 +11,7 @@ export default async function FaqPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="mb-6 text-4xl sm:text-5xl">Mark Six questions</h1>
+      <h2 className="sr-only">Questions</h2>
       <FaqList items={items} />
       <JsonLd data={breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'FAQ', path: '/faq' }])} />
     </div>

@@ -99,12 +99,12 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
   if (!needsConfirm && signupPoints) await exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [insertId, signupPoints, 'Welcome points']);
   if (needsConfirm) void sendVerification(insertId, email);
   await createSession(insertId, hash);
-  redirect('/account');
+  redirect('/account?welcome=1');
 }
 
 export async function logoutAction() {
   await destroySession();
-  redirect('/');
+  redirect('/login?out=1');
 }
 
 const MAX_PER_ORDER = 20;
@@ -151,19 +151,19 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
 
 export async function claimDailyAction() {
   const user = await requireUser();
-  if (!user.verified) return;
+  if (!user.verified) redirect('/account?claim=verify');
   const { dailyPoints } = await getSettings();
   // One claim per UTC day; the WHERE makes a double click harmless. MySQL assigns left to right, so `streak` sees the old last_claim.
   const res = await exec(
     'UPDATE users SET streak = IF(last_claim = UTC_DATE() - INTERVAL 1 DAY, streak + 1, 1), last_claim = UTC_DATE() WHERE id=? AND (last_claim IS NULL OR last_claim < UTC_DATE())',
     [user.id],
   );
-  if (res.affectedRows) {
-    const [u] = await query<RowDataPacket & { streak: number }>('SELECT streak FROM users WHERE id=?', [user.id]);
-    const bonus = dailyPoints + 10 * (Math.min(Number(u.streak), 7) - 1); // +10 per day of streak, up to day 7
-    await addPoints(user.id, bonus, `Daily free points (day ${u.streak} streak)`);
-  }
+  if (!res.affectedRows) redirect('/account?claim=done');
+  const [u] = await query<RowDataPacket & { streak: number }>('SELECT streak FROM users WHERE id=?', [user.id]);
+  const bonus = dailyPoints + 10 * (Math.min(Number(u.streak), 7) - 1); // +10 per day of streak, up to day 7
+  await addPoints(user.id, bonus, `Daily free points (day ${u.streak} streak)`);
   revalidatePath('/account', 'layout');
+  redirect(`/account?claim=${bonus}`);
 }
 
 export async function saveNicknameAction(fd: FormData) {

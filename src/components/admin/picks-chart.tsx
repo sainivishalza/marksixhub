@@ -5,9 +5,9 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 export function PicksChart({ data }: { data: { date: string; picks: number }[] }) {
   const total = data.reduce((sum, d) => sum + d.picks, 0);
   return (
-    <figure>
+    <figure className="min-w-0">
       <figcaption className="sr-only">Saved number sets per day over the last 30 days. {total} in total.</figcaption>
-      <div className="h-64 w-full">
+      <div className="h-64 w-full overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -20 }}>
             <CartesianGrid stroke="rgba(212,175,55,0.12)" vertical={false} />
