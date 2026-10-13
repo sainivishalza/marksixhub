@@ -40,7 +40,7 @@ export default async function StatisticsPage() {
       <h1 className="text-4xl sm:text-5xl">Mark Six number statistics</h1>
       <p className="mb-8 mt-3 max-w-[65ch] text-mute">
         How often each number from 1 to 49 has been drawn in the {draws.length} Mark Six results you can see. The extra number is not counted.{access.locked ? <> <Link href="/results#unlock" className="text-gold-bright underline-offset-4 hover:underline">Unlock older results</Link> for statistics over a longer history.</> : null}
-        Every draw is independent: past results do not make any number more or less likely next time.
+        {' '}Every draw is independent: past results do not make any number more or less likely next time.
       </p>
 
       {draws.length === 0 ? (

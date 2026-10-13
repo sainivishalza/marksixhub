@@ -1,4 +1,5 @@
 import 'server-only';
+import { cookies } from 'next/headers';
 import type { RowDataPacket } from 'mysql2/promise';
 import type { User } from './auth';
 import { dbConfigured, query } from './db';
@@ -17,9 +18,13 @@ export type HistoryAccess = {
   /** Years of history the visitor has bought. */
   years: number;
   staff: boolean;
+  /** A staff member who chose to see the site as a customer does (locks and points rules apply). */
+  previewing: boolean;
 };
 
-const OPEN: HistoryAccess = { from: null, freeFrom: null, latest: null, locked: 0, years: 0, staff: false };
+export const PREVIEW_COOKIE = 'mh_preview';
+
+const OPEN: HistoryAccess = { from: null, freeFrom: null, latest: null, locked: 0, years: 0, staff: false, previewing: false };
 
 /** What can this visitor see of the results archive? The latest 40 are free; the rest are bought in years; staff see everything. */
 export async function getHistoryAccess(user: User | null): Promise<HistoryAccess> {
@@ -31,14 +36,16 @@ export async function getHistoryAccess(user: User | null): Promise<HistoryAccess
   const [newest] = await query<RowDataPacket & { d: string | null }>("SELECT MAX(draw_date) AS d FROM draws WHERE status='published'");
   const freeFrom = free?.d ? String(free.d).slice(0, 10) : null;
   const latest = newest?.d ? String(newest.d).slice(0, 10) : null;
-  const staff = Boolean(user && can(user.role, 'view'));
+  const isStaff = Boolean(user && can(user.role, 'view'));
+  const previewing = isStaff && (await cookies()).get(PREVIEW_COOKIE)?.value === '1';
+  const staff = isStaff && !previewing;
   const from = staff ? null : effectiveFrom(freeFrom, user?.historyFrom ?? null);
   let locked = 0;
   if (from) {
     const [n] = await query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM draws WHERE status='published' AND draw_date < ?", [from]);
     locked = Number(n.n);
   }
-  return { from, freeFrom, latest, locked, years: user?.historyYears ?? 0, staff };
+  return { from, freeFrom, latest, locked, years: user?.historyYears ?? 0, staff, previewing };
 }
 
 export type Tier = { years: number; since: string; draws: number };

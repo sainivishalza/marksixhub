@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { Inter, JetBrains_Mono, Playfair_Display } from 'next/font/google';
 import { JsonLd } from '@/components/json-ld';
 import { BASE_URL, IS_STAGING, absolute } from '@/lib/seo';
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to content
         </a>
         {children}
+        {process.env.PLAUSIBLE_DOMAIN && !IS_STAGING ? <Script defer data-domain={process.env.PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" strategy="afterInteractive" /> : null}
         <JsonLd data={{ '@context': 'https://schema.org', '@type': 'WebSite', name: settings.siteName, url: absolute('/'), inLanguage: 'en' }} />
       </body>
     </html>

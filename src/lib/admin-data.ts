@@ -54,6 +54,12 @@ export async function getDashboard() {
   };
 }
 
+/** Orders waiting for approval across all draws (menu badge and dashboard). */
+export async function countPendingOrders(): Promise<number> {
+  const [row] = await query<Count>("SELECT COUNT(*) AS n FROM orders WHERE status='pending' AND refunded=0");
+  return num(row.n);
+}
+
 /** The draw number after the latest one (26/106 becomes 26/107), to save typing. Empty if there are no draws yet. */
 export async function suggestNextDrawNo(): Promise<string> {
   const rows = await query<RowDataPacket & { draw_no: string }>('SELECT draw_no FROM draws ORDER BY draw_date DESC, id DESC LIMIT 1');
@@ -79,7 +85,15 @@ export async function getDrawFull(id: number): Promise<{ draw: Draw; prizes: Pri
     'SELECT division, winners, prize_hkd FROM draw_prizes WHERE draw_id=? ORDER BY division',
     [id],
   );
-  return { draw: toDraw(rows[0]), prizes: prizes.map((p) => ({ division: p.division, winners: p.winners, prizeHkd: num(p.prize_hkd) })) };
+  return { draw: toDraw(rows[0]), prizes: prizes.map((p) => ({ division: p.division, winners: num(p.winners), prizeHkd: num(p.prize_hkd) })) };
+}
+
+/** Prizes of the latest published draw, so a new result can start from them ("copy last draw"). */
+export async function getLastPrizes(): Promise<Prize[]> {
+  const rows = await query<RowDataPacket & { division: number; winners: number; prize_hkd: number | string }>(
+    "SELECT division, winners, prize_hkd FROM draw_prizes WHERE draw_id = (SELECT id FROM draws WHERE status='published' ORDER BY draw_date DESC, id DESC LIMIT 1) ORDER BY division",
+  );
+  return rows.map((p) => ({ division: p.division, winners: num(p.winners), prizeHkd: num(p.prize_hkd) }));
 }
 
 export async function listAllEvents(): Promise<(EventItem & { active: boolean })[]> {

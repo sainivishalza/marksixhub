@@ -112,3 +112,17 @@ test('bad stop selling time is rejected; publishing with no numbers explains wha
   assert.equal(empty.errors.length, 1);
   assert.match(empty.errors[0], /keep this draw as Upcoming/);
 });
+
+test('winning units keep one decimal and accept commas', () => {
+  const r = readDraw({
+    draw_no: '26/106', draw_date: '2026-10-06', status: 'published', extra: '28',
+    n1: '9', n2: '29', n3: '31', n4: '34', n5: '36', n6: '41',
+    w2: '2.5', p2: '$637,870', w5: '4,085.2', p5: '640', w7: '71,865.94', p7: '40', w1: '', p1: '',
+  });
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.value.prizes[1].winners, 2.5);
+  assert.equal(r.value.prizes[1].prizeHkd, 637870);
+  assert.equal(r.value.prizes[4].winners, 4085.2);
+  assert.equal(r.value.prizes[6].winners, 71865.9, 'rounded to one decimal');
+  assert.equal(r.value.prizes[0].winners, 0, 'blank means nobody won');
+});

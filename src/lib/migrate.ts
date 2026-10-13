@@ -175,6 +175,9 @@ export async function migrate() {
   if (!(await hasColumn('users', 'last_login_at'))) await exec('ALTER TABLE users ADD COLUMN last_login_at DATETIME NULL');
 
   // Extra details for an upcoming draw, as the HKJC lists them. All optional.
+  // The HKJC counts "winning units" such as 2.5, so the column must hold one decimal place (data is preserved).
+  await exec('ALTER TABLE draw_prizes MODIFY winners DECIMAL(14,1) NOT NULL DEFAULT 0');
+
   for (const [column, type] of [
     ['stop_selling_time', 'TIME NULL'],
     ['turnover_hkd', 'BIGINT NULL'],

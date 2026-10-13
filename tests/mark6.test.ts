@@ -131,3 +131,77 @@ test('xlsx reader: text, numbers, empty cells and XML entities', async () => {
   assert.equal(rows[3][1], null);
   assert.throws(() => readXlsx(Buffer.from('not a zip file at all, just text')), /not an Excel/);
 });
+
+test('winning units display like the HKJC: one decimal, a dash for none', async () => {
+  const { unitsLabel } = await import('../src/lib/format.ts');
+  assert.equal(unitsLabel(2.5), '2.5');
+  assert.equal(unitsLabel(283), '283.0');
+  assert.equal(unitsLabel(4085.2), '4,085.2');
+  assert.equal(unitsLabel(0), '-');
+});
+
+test('pasted numbers are split for the six-circle input', async () => {
+  const { splitPasted, boxNumbers } = await import('../src/lib/mark6.ts');
+  assert.deepEqual(splitPasted('3 12 25 31 40 49'), ['3', '12', '25', '31', '40', '49']);
+  assert.deepEqual(splitPasted('3, 12; 25-31/40 49'), ['3', '12', '25', '31', '40', '49']);
+  assert.deepEqual(splitPasted('031225314049'), ['03', '12', '25', '31', '40', '49']);
+  assert.deepEqual(splitPasted('12345'), [], 'odd run of digits is ambiguous');
+  assert.deepEqual(splitPasted('no numbers here'), []);
+  assert.deepEqual(boxNumbers(['3', '12', '12', '0', '50', '', '49']), [3, 12, 49], 'duplicates, 0, 50 and blanks are ignored');
+});
+
+test('digits that arrive all at once are read left to right', async () => {
+  const { splitRun } = await import('../src/lib/mark6.ts');
+  assert.deepEqual(splitRun('1225314049'), ['12', '25', '31', '40', '49']);
+  assert.deepEqual(splitRun('5612'), ['5', '6', '12']);
+  assert.deepEqual(splitRun('0312'), ['03', '12']);
+  assert.deepEqual(splitRun('7'), ['7']);
+  assert.deepEqual(splitRun('123'), ['12', '3']);
+  assert.deepEqual(splitRun(''), []);
+});
+
+test('pasted result text fills numbers, extra, turnover and prizes', async () => {
+  const { parseResultText } = await import('../src/lib/mark6.ts');
+  const r = parseResultText(`Draw 26/106 07/10/2026
+Winning Numbers 3 12 25 31 40 49 Extra 7
+Total Turnover $14,675,740
+1st Prize 0.0 $0
+2nd Prize 2.5 $1,200,000
+3rd Prize 28.0 $85,000.00
+7th Prize 5,000 $40`);
+  assert.equal(r.drawNo, '26/106');
+  assert.deepEqual(r.numbers, [3, 12, 25, 31, 40, 49]);
+  assert.equal(r.extra, 7);
+  assert.equal(r.turnover, '14675740');
+  assert.deepEqual(r.prizes.map((p) => [p.division, p.winners, p.prize]), [[1, '0.0', '0'], [2, '2.5', '1200000'], [3, '28.0', '85000'], [7, '5000', '40']]);
+  assert.deepEqual(parseResultText('nothing useful here').numbers, []);
+});
+
+test('results page layout: amounts first, winning units in their own column', async () => {
+  const { parseResultText } = await import('../src/lib/mark6.ts');
+  const expected = [[1, '2.0', '14072930'], [2, '3.0', '804650'], [3, '218.5', '29460'], [4, '382.7', '9600'], [5, '9,383.2'.replace(',', ''), '640'], [6, '9365.5', '320'], [7, '152265.7', '40']];
+  // text order as extracted from the printed page
+  const raw = `Draw Number: 26/109 Draw Results
+Draw Date: 13/10/2026 (Tuesday)
+3 5 9 17 21 25 + 38
+Total Turnover: $72,221,659
+Prize Unit Prize
+1st $14,072,930
+2nd $804,650 3rd $29,460
+Winning Unit
+2.0 3.0 218.5
+Prize Unit Prize
+4th $9,600 5th $640 6th $320 7th $40
+Winning Unit
+382.7 9,383.2 9,365.5 152,265.7`;
+  const r = parseResultText(raw);
+  assert.equal(r.drawNo, '26/109');
+  assert.equal(r.date, '2026-10-13');
+  assert.deepEqual(r.numbers, [3, 5, 9, 17, 21, 25]);
+  assert.equal(r.extra, 38);
+  assert.equal(r.turnover, '72221659');
+  assert.deepEqual(r.prizes.map((p) => [p.division, p.winners, p.prize]), expected);
+  // row by row, units beside each prize
+  const rows = parseResultText('1st $14,072,930 2.0 4th $9,600 382.7 2nd $804,650 3.0 5th $640 9,383.2 3rd $29,460 218.5 6th $320 9,365.5 7th $40 152,265.7');
+  assert.deepEqual(rows.prizes.map((p) => [p.division, p.winners, p.prize]), expected);
+});

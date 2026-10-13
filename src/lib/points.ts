@@ -2,6 +2,7 @@ import 'server-only';
 import type { RowDataPacket } from 'mysql2/promise';
 import { query, tx } from './db';
 import { combinations, evaluate, parseNumbers } from './mark6';
+import { notifyWins } from './order-mail';
 import { getSettings } from './settings';
 
 // Points are free play credits: never sold, never redeemable for money. Every change is logged in point_log.
@@ -30,6 +31,7 @@ export async function settleTickets() {
        LEFT JOIN orders o ON o.id = s.order_id
       WHERE s.settled=0 AND (o.id IS NULL OR o.status='accepted')`,
   );
+  const wins = new Map<number, Map<string, number>>();
   for (const r of rows) {
     // A multiple entry wins on every 6-number combination inside it.
     const winning = parseNumbers(r.w);
@@ -42,9 +44,13 @@ export async function settleTickets() {
       if (res.affectedRows && won > 0) {
         await t.exec('UPDATE users SET points = points + ? WHERE id=?', [won, r.user_id]);
         await t.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [r.user_id, won, `Won, draw ${r.draw_no}`]);
+        const byDraw = wins.get(r.user_id) ?? new Map<string, number>();
+        byDraw.set(r.draw_no, (byDraw.get(r.draw_no) ?? 0) + won);
+        wins.set(r.user_id, byDraw);
       }
     });
   }
+  notifyWins(wins);
 }
 
 /** Draws close for orders at their stop selling time, or the end of the draw day, Hong Kong time. */

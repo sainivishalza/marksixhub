@@ -3,7 +3,7 @@ import { JsonLd } from '@/components/json-ld';
 import { ResultsTable } from '@/components/results-table';
 import { UnlockPanel } from '@/components/unlock-panel';
 import { getUser } from '@/lib/auth';
-import { getDraws } from '@/lib/data';
+import { getCurrentCurrency, getDraws, getTopPrizes } from '@/lib/data';
 import { getHistoryAccess } from '@/lib/history';
 import { breadcrumbLd } from '@/lib/seo';
 import { seoMetadata } from '@/lib/seo-db';
@@ -19,6 +19,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Sear
   const access = await getHistoryAccess(await getUser());
   const page = Math.max(1, parseInt(rawPage ?? '1', 10) || 1);
   const { draws, total } = await getDraws(PER_PAGE, (page - 1) * PER_PAGE, access.from);
+  const [{ current }, tops] = await Promise.all([getCurrentCurrency(), getTopPrizes(draws.map((d) => d.id))]);
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const oldestFirst = sort === 'oldest';
   const shown = oldestFirst ? [...draws].reverse() : draws;
@@ -35,7 +36,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Sear
           {oldestFirst ? 'Show newest first' : 'Show oldest first on this page'}
         </Link>
       </div>
-      <ResultsTable draws={shown} />
+      <ResultsTable draws={shown} tops={tops} currency={current} />
       {pages > 1 ? (
         <nav aria-label="Pages" className="mt-6 flex items-center justify-between text-sm">
           {page > 1 ? <Link href={link(page - 1)} rel="prev" className="text-gold-bright hover:underline">Newer</Link> : <span />}

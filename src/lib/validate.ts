@@ -21,6 +21,12 @@ const str = (v: Raw[string]) => (typeof v === 'string' ? v.trim() : '');
 const whole = (v: Raw[string]) => Math.max(0, Math.min(9_000_000_000_000, Math.round(Number(str(v).replace(/[,$\s]/g, ''))) || 0));
 
 /** Blank stays blank (null); otherwise a whole number, tolerating "$", spaces and commas. */
+/** Winning units are fractional (2.5, 4,085.2): keep one decimal. */
+const units = (v: Raw[string]) => {
+  const n = Number(str(v).replace(/[,$\s]/g, ''));
+  return Number.isFinite(n) ? Math.max(0, Math.min(1_000_000_000, Math.round(n * 10) / 10)) : 0;
+};
+
 const optWhole = (v: Raw[string]): number | null => {
   const t = str(v).replace(/[,$\s]/g, '');
   if (!t) return null;
@@ -59,7 +65,7 @@ export function readDraw(raw: Raw): { value: DrawInput; errors: string[] } {
 
   const prizes = [1, 2, 3, 4, 5, 6, 7].map((division) => ({
     division,
-    winners: whole(raw[`w${division}`]),
+    winners: units(raw[`w${division}`]),
     prizeHkd: whole(raw[`p${division}`]),
   }));
 
