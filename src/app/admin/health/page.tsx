@@ -1,6 +1,6 @@
 import { CheckCircle2, CircleAlert, TriangleAlert } from 'lucide-react';
 import { PageHeader } from '@/components/admin/ui';
-import { requireRole } from '@/lib/auth';
+import { clientIpDiagnostics, requireRole } from '@/lib/auth';
 import { problems, runHealth } from '@/lib/health';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,22 @@ const STYLE = {
 export default async function HealthPage() {
   await requireRole('manage');
   const checks = await runHealth();
+  // Only the page knows who is asking, so the address check lives here and not in the daily email.
+  const ip = await clientIpDiagnostics();
+  checks.push({
+    id: 'clientip',
+    label: 'Visitor address and rate limits',
+    status: ip.hops > 0 ? 'ok' : 'warn',
+    detail: ip.hops > 0
+      ? `The app sees your address as ${ip.chosen} (proxy chain: ${ip.chain}; ${ip.hops} trusted proxy hop${ip.hops === 1 ? '' : 's'}).`
+      : `The app sees: ${ip.chain}. If that shows your own address as the LAST entry, set TRUSTED_PROXY_HOPS to the number of proxies (usually 1) in the hosting settings, so a visitor cannot forge their address to get around the rate limits. Until then the first entry is used.`,
+  });
+  checks.push({
+    id: 'staff2fa',
+    label: 'Two-step login rule for staff',
+    status: process.env.REQUIRE_STAFF_2FA === '1' ? 'ok' : 'warn',
+    detail: process.env.REQUIRE_STAFF_2FA === '1' ? 'Staff must have two-step login to use the admin area.' : 'Not required. Set REQUIRE_STAFF_2FA=1 in the hosting settings after you have turned on two-step login for your own account.',
+  });
   const bad = problems(checks).length;
   return (
     <>

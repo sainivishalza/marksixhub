@@ -59,3 +59,15 @@ Paying at sign-up would reward fake accounts. Paying when staff approve the firs
 
 ## Result source is read-only and fixed
 The address comes from RESULT_SOURCE_URL only, so no visitor or admin input can aim the server at another host (no SSRF). Redirects are refused, size and time are capped, and the data is validated strictly (six different balls 1 to 49, a different extra, whole numbers). The button fills the form; saving and publishing stay manual because publishing pays out points.
+
+## CSP keeps 'unsafe-inline' for scripts
+Next.js emits inline scripts for hydration; a nonce needs per-request rendering of every page, which would drop static caching. Everything else is locked (no outside scripts, frames, forms, plugins, base tag). The policy is also a meta tag because Hostinger may overwrite headers.
+
+## Forwarded-for is distrusted by default
+Anyone can send `X-Forwarded-For`, which would let them dodge IP rate limits. The app uses the real socket address unless TRUSTED_PROXY_HOPS says how many proxies are ours; then it counts from the right.
+
+## Session cookie renamed `__Host-mh_session`
+The `__Host-` prefix forces Secure, path `/` and no Domain, so a sibling subdomain cannot set or overwrite it. Cost: one forced re-login at release.
+
+## No row-level security, buckets or webhooks
+MySQL has no RLS; every query is scoped by the session user id in SQL. The site has no file storage buckets and no inbound webhooks. Uploads are parsed in memory and never stored.

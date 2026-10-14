@@ -62,6 +62,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <h2 id="two-step-h" className="font-serif text-xl">Two-step login</h2>
         {two === 'on' ? <p role="status" className="mt-2 text-sm text-win">Two-step login is on.</p> : null}
         {two === 'off' ? <p role="status" className="mt-2 text-sm text-mute">Two-step login is off.</p> : null}
+        {two === 'required' ? <p role="alert" className="mt-2 text-sm text-miss">Staff accounts need two-step login before they can use the admin area. Set it up below.</p> : null}
         {two === 'bad' ? <p role="alert" className="mt-2 text-sm text-miss">That did not work. Check the code (and password) and try again.</p> : null}
         {Number(me?.totp_on) ? (
           <form action={disableTotpAction} className="mt-3 max-w-sm space-y-3">

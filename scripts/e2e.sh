@@ -43,7 +43,7 @@ ONLY=("$@")
 fresh; start NODE_ENV=production;                      run $E/01-core.mjs
 start NODE_ENV=production;                             run $E/02-admin.mjs     # must follow 01 on the same data, on a fresh server
 start NODE_ENV=production;                             run $E/03-submit-flow.mjs; run $E/06-receipts.mjs
-for n in 04-checker 07-concurrency 13-reminders 14-transfers 15-error-alerts 16-invites-achievements 17-result-source; do
+for n in 04-checker 07-concurrency 13-reminders 14-transfers 15-error-alerts 16-invites-achievements 17-result-source 18-security; do
   fresh; start NODE_ENV=production;                    run $E/$n.mjs
 done
 fresh; start NODE_ENV=production; node $E/seed.mjs >/dev/null 2>&1; run $E/12-results-search.mjs

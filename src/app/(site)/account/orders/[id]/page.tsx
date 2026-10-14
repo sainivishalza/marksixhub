@@ -10,7 +10,7 @@ import { requireUser } from '@/lib/auth';
 export const metadata: Metadata = { title: 'Order receipt', robots: { index: false, follow: false } };
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
-  const id = parseInt((await params).id, 10);
+  const id = Number(/^\d{1,9}$/.test((await params).id) ? (await params).id : NaN);
   const user = await requireUser(`/account/orders/${id}`);
   const order = Number.isInteger(id) ? await getOrder(user.id, id) : null;
   if (!order) notFound();

@@ -23,6 +23,8 @@ export async function contactAction(_prev: ContactState, fd: FormData): Promise<
   if (message.length < 10) return { ...kept, error: 'Please write a few words so we know how to help (at least 10 characters).' };
   const limit = rateLimit(`contact:${await clientIp()}`, 3, 60 * 60_000);
   if (!limit.ok) return { ...kept, error: `Too many messages. Try again in ${Math.ceil(limit.retryAfterSec / 60)} minutes, or email ${CONTACT_EMAIL}.` };
+  const allLimit = rateLimit('contact:all', 40, 60 * 60_000); // site-wide ceiling against a flood of messages to the owner
+  if (!allLimit.ok) return { ...kept, error: `The form is busy. Please email ${CONTACT_EMAIL} instead.` };
   const sent = mailConfigured && (await sendMail(CONTACT_EMAIL, `Website message from ${name}`, `From: ${name} <${email}>\n\n${message}`, email));
   if (!sent) return { ...kept, error: `We could not send your message just now. Please email ${CONTACT_EMAIL} instead.` };
   return { ok: 'Thanks, your message has been sent. We will reply by email.' };

@@ -1,6 +1,7 @@
 'use server';
 
 import { rateLimit } from '@/lib/rate-limit';
+import { csvProblem, MAX_XLSX_BYTES, xlsxProblem } from '@/lib/upload-rules';
 import { rewardReferralsForOrders } from '@/lib/referral';
 import { fetchResult } from '@/lib/result-source';
 import type { PastedResult } from '@/lib/mark6';
@@ -141,6 +142,8 @@ export async function importDrawsAction(_prev: ImportState, fd: FormData): Promi
   if (file instanceof File && file.size > 0) {
     if (file.size > MAX_CSV_BYTES) return { errors: ['That file is too large. Keep it under 500 KB.'] };
     text = await file.text();
+    const problem = csvProblem({ name: file.name, type: file.type, size: file.size, text });
+    if (problem) return { errors: [problem] };
   }
   if (!text.trim()) return { errors: ['Paste CSV text or choose a file.'] };
   if (text.length > MAX_CSV_BYTES) return { errors: ['That CSV is too large. Keep it under 500 KB.'] };
@@ -175,7 +178,7 @@ export async function importDrawsAction(_prev: ImportState, fd: FormData): Promi
 /* ---------- events ---------- */
 
 export async function saveEventAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   const title = str(fd, 'title').slice(0, 120);
   const date = str(fd, 'event_date');
   if (!title || !isDate(date)) back('/admin/events', 'error', 'A title and a valid date are required.');
@@ -183,19 +186,21 @@ export async function saveEventAction(fd: FormData) {
   const id = int(fd, 'id');
   if (id) await exec('UPDATE events SET title=?, event_date=?, body=?, active=? WHERE id=?', [...row, id]);
   else await exec('INSERT INTO events (title, event_date, body, active) VALUES (?,?,?,?)', row);
+  await audit(me.id, id ? 'event.update' : 'event.create', title);
   back('/admin/events', 'ok', 'Event saved.');
 }
 
 export async function deleteEventAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   await exec('DELETE FROM events WHERE id=?', [int(fd, 'id')]);
+  await audit(me.id, 'event.delete', `event ${int(fd, 'id')}`);
   back('/admin/events', 'ok', 'Event deleted.');
 }
 
 /* ---------- FAQs ---------- */
 
 export async function saveFaqAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   const question = str(fd, 'question').slice(0, 200);
   const answer = str(fd, 'answer').slice(0, 2000);
   if (!question || !answer) back('/admin/faqs', 'error', 'Both a question and an answer are required.');
@@ -203,29 +208,32 @@ export async function saveFaqAction(fd: FormData) {
   const id = int(fd, 'id');
   if (id) await exec('UPDATE faqs SET question=?, answer=?, sort_order=?, active=? WHERE id=?', [...row, id]);
   else await exec('INSERT INTO faqs (question, answer, sort_order, active) VALUES (?,?,?,?)', row);
+  await audit(me.id, id ? 'faq.update' : 'faq.create', question);
   back('/admin/faqs', 'ok', 'FAQ saved. It appears on the site and in the FAQ structured data straight away.');
 }
 
 export async function deleteFaqAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   await exec('DELETE FROM faqs WHERE id=?', [int(fd, 'id')]);
+  await audit(me.id, 'faq.delete', `faq ${int(fd, 'id')}`);
   back('/admin/faqs', 'ok', 'FAQ deleted.');
 }
 
 /* ---------- SEO ---------- */
 
 export async function saveSeoAction(fd: FormData) {
-  await requireRole('content');
+  const me = await requireRole('content');
   const path = str(fd, 'path');
   if (!(path in SEO_DEFAULTS)) back('/admin/seo', 'error', 'Unknown page.');
   await saveSeo(path, str(fd, 'title').slice(0, 120), str(fd, 'description').slice(0, 300));
+  await audit(me.id, 'seo.save', path);
   back('/admin/seo', 'ok', `Saved ${SEO_DEFAULTS[path].label}. Search engines pick this up the next time they visit.`);
 }
 
 /* ---------- currencies (admin only) ---------- */
 
 export async function saveCurrencyAction(fd: FormData) {
-  await requireRole('manage');
+  const me = await requireRole('manage');
   const { value, error } = readCurrency(Object.fromEntries(fd.entries()));
   if (error) back('/admin/currencies', 'error', error);
   await exec(
@@ -233,15 +241,17 @@ export async function saveCurrencyAction(fd: FormData) {
     [value.code, value.name, value.symbol, value.rate, value.active ? 1 : 0],
   );
   bustCurrencies();
+  await audit(me.id, 'currency.save', `${value.code} rate ${value.rate}`);
   back('/admin/currencies', 'ok', `${value.code} saved.`);
 }
 
 export async function deleteCurrencyAction(fd: FormData) {
-  await requireRole('manage');
+  const me = await requireRole('manage');
   const code = str(fd, 'code').toUpperCase();
   if (code === 'HKD') back('/admin/currencies', 'error', 'HKD is the base currency and cannot be removed.');
   await exec('DELETE FROM currencies WHERE code=?', [code]);
   bustCurrencies();
+  await audit(me.id, 'currency.delete', code);
   back('/admin/currencies', 'ok', `${code} removed.`);
 }
 
@@ -420,10 +430,13 @@ export async function importHistoryAction(_prev: HistoryImportState, fd: FormDat
   const me = await requireRole('content');
   const file = fd.get('file');
   if (!(file instanceof File) || file.size === 0) return { errors: ['Choose an Excel (.xlsx) file.'] };
-  if (file.size > 5_000_000) return { errors: ['That file is too large. Keep it under 5 MB.'] };
+  if (file.size > MAX_XLSX_BYTES) return { errors: ['That file is too large. Keep it under 5 MB.'] };
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const problem = xlsxProblem({ name: file.name, size: bytes.length, head: bytes.subarray(0, 4) });
+  if (problem) return { errors: [problem] };
   let rows: Cell[][];
   try {
-    rows = readXlsx(Buffer.from(await file.arrayBuffer()));
+    rows = readXlsx(bytes);
   } catch (err) {
     return { errors: [err instanceof Error ? err.message : 'Could not read that file.'] };
   }

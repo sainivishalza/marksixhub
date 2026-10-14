@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { RowDataPacket } from 'mysql2/promise';
+import { audit } from '@/lib/audit';
 import { clientIp, createSession, destroySession, getUser, ipHash, requireUser, touchLogin } from '@/lib/auth';
 import { dbConfigured, exec, query, tx } from '@/lib/db';
 import { isBall, sortAsc } from '@/lib/mark6';
@@ -31,6 +32,8 @@ const CODE_NEEDED = 'Enter the 6-digit code from your authenticator app, togethe
 const MAX_SETS = 50;
 const text = (fd: FormData, k: string) => (typeof fd.get(k) === 'string' ? (fd.get(k) as string) : '');
 const tooMany = (sec: number) => ({ error: `Too many attempts. Try again in ${Math.ceil(sec / 60)} minute${sec > 60 ? 's' : ''}.` });
+/** A busy signal for repeated actions by one member: more than `limit` in 10 minutes. */
+const busy = (userId: number, name: string, limit = 60) => !rateLimit(`act:${name}:${userId}`, limit, 10 * 60_000).ok;
 const NO_DB: FormState = { error: 'The database is not connected yet, so accounts are unavailable.' };
 
 type UserRow = RowDataPacket & { id: number; pass_hash: string; role: Role; blocked?: number; totp_on?: number; totp_secret?: string | null };
@@ -65,6 +68,7 @@ export async function loginAction(_prev: FormState, fd: FormData): Promise<FormS
   await exec('DELETE FROM login_fails WHERE email=?', [email]);
   await createSession(user.id, user.pass_hash);
   await touchLogin(user.id);
+  if (can(user.role, 'view')) await audit(user.id, 'staff.login', `from ${ipHash(await clientIp()).slice(0, 8)}${user.totp_on ? ', two-step' : ', no two-step'}`);
   const next = text(fd, 'next');
   redirect(safeNext(next, can(user.role, 'view') ? '/admin' : '/account'));
 }
@@ -73,6 +77,9 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
   if (!dbConfigured) return NO_DB;
   const limit = rateLimit(`register:${await clientIp()}`, 5, 60 * 60_000);
   if (!limit.ok) return tooMany(limit.retryAfterSec);
+  // A ceiling for the whole site, so forged addresses cannot be used to create accounts without end.
+  const all = rateLimit('register:all', 200, 60 * 60_000);
+  if (!all.ok) return tooMany(all.retryAfterSec);
 
   const email = text(fd, 'email').trim().toLowerCase();
   const password = text(fd, 'password');
@@ -151,6 +158,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in to place tickets.' };
   if (!user.verified) return { ok: false, message: 'Confirm your email address first. We sent you a link; you can ask for another one in My account.' };
+  if (busy(user.id, 'place', 20)) return { ok: false, message: 'Too many orders in a short time. Wait a few minutes and try again.' };
   const tickets = (Array.isArray(sets) ? sets : []).slice(0, MAX_PER_ORDER).map((s) => [...new Set(Array.isArray(s) ? s.map(Number) : [])]);
   if (!tickets.length || tickets.some((t) => t.length !== 6 || !t.every(isBall))) {
     return { ok: false, message: 'Each ticket needs exactly 6 different numbers from 1 to 49.' };
@@ -188,6 +196,7 @@ export async function placeTicketsAction(sets: number[][]): Promise<{ ok: boolea
 
 export async function claimDailyAction() {
   const user = await requireUser();
+  if (busy(user.id, 'claim', 20)) redirect('/account');
   if (!user.verified) redirect('/account?claim=verify');
   const { dailyPoints } = await getSettings();
   // One claim per UTC day; the WHERE makes a double click harmless. MySQL assigns left to right, so `streak` sees the old last_claim.
@@ -205,6 +214,7 @@ export async function claimDailyAction() {
 
 export async function saveNicknameAction(fd: FormData) {
   const user = await requireUser();
+  if (busy(user.id, 'nick', 20)) redirect('/account/settings?nick=' + encodeURIComponent('Too many changes. Try again in a few minutes.'));
   const nick = text(fd, 'nickname').trim();
   const bad = (msg: string): never => redirect(`/account/settings?nick=${encodeURIComponent(msg)}`);
   if (nick && !/^[A-Za-z0-9_-]{3,20}$/.test(nick)) bad('Use 3 to 20 letters, numbers, - or _.');
@@ -219,6 +229,7 @@ export async function saveNicknameAction(fd: FormData) {
 
 export async function saveRemindersAction(fd: FormData) {
   const user = await requireUser();
+  if (busy(user.id, 'remind', 20)) redirect('/account/settings#reminders');
   const on = text(fd, 'remind') === '1' ? 1 : 0;
   await exec('UPDATE users SET remind=?, remind_sent=NULL WHERE id=?', [on, user.id]);
   redirect(`/account/settings?remind=${on ? 'on' : 'off'}#reminders`);
@@ -232,6 +243,7 @@ export async function unsubscribeAction(fd: FormData) {
 
 export async function deleteSetAction(fd: FormData) {
   const user = await requireUser();
+  if (busy(user.id, 'delset', 60)) return;
   await exec('DELETE FROM saved_sets WHERE id=? AND user_id=? AND settled=1', [parseInt(text(fd, 'id'), 10) || 0, user.id]);
   revalidatePath('/account', 'layout');
 }
@@ -250,6 +262,7 @@ export async function changePasswordAction(_prev: FormState, fd: FormData): Prom
   const hash = await hashPassword(next);
   await exec('UPDATE users SET pass_hash=? WHERE id=?', [hash, user.id]);
   await createSession(user.id, hash); // every other session is now signed out
+  await audit(user.id, 'password.change', 'by the member');
   return { ok: 'Password changed. Other devices have been signed out.' };
 }
 
@@ -264,6 +277,7 @@ async function favourites(userId: number): Promise<Favourite[]> {
 export async function saveFavouriteAction(numbers: number[]): Promise<{ ok: boolean; message: string; favourites?: Favourite[] }> {
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in to save favourites.' };
+  if (busy(user.id, 'fav', 60)) return { ok: false, message: 'Too many changes. Try again in a few minutes.' };
   const nums = sortAsc([...new Set(Array.isArray(numbers) ? numbers.map(Number) : [])]);
   if (nums.length !== 6 || !nums.every(isBall)) return { ok: false, message: 'Choose 6 numbers first.' };
   const list = await favourites(user.id);
@@ -277,12 +291,14 @@ export async function saveFavouriteAction(numbers: number[]): Promise<{ ok: bool
 export async function deleteFavouriteAction(id: number): Promise<{ ok: boolean; message: string; favourites?: Favourite[] }> {
   const user = await getUser();
   if (!user) return { ok: false, message: 'Log in first.' };
+  if (busy(user.id, 'fav', 60)) return { ok: false, message: 'Too many changes. Try again in a few minutes.' };
   await exec('DELETE FROM favourites WHERE id=? AND user_id=?', [Number(id) || 0, user.id]);
   return { ok: true, message: 'Removed.', favourites: await favourites(user.id) };
 }
 
 export async function dismissWinsAction() {
   const user = await requireUser();
+  if (busy(user.id, 'dismiss', 60)) return;
   await exec('UPDATE saved_sets SET notified=1 WHERE user_id=? AND settled=1', [user.id]);
   revalidatePath('/account', 'layout');
 }
@@ -291,6 +307,7 @@ export async function dismissWinsAction() {
 
 export async function beginTotpAction() {
   const user = await requireUser();
+  if (busy(user.id, 'totp-begin', 10)) return;
   await exec('UPDATE users SET totp_secret=?, totp_on=0 WHERE id=? AND totp_on=0', [newTotpSecret(), user.id]);
   revalidatePath('/account', 'layout'); // the redirect target equals the current URL, so the page must be refreshed explicitly
   redirect('/account/settings?two=setup#two-step');
@@ -298,9 +315,13 @@ export async function beginTotpAction() {
 
 export async function confirmTotpAction(fd: FormData) {
   const user = await requireUser();
+  if (busy(user.id, 'totp-confirm', 10)) redirect('/account/settings?two=bad#two-step');
   const [u] = await query<RowDataPacket & { totp_secret: string | null }>('SELECT totp_secret FROM users WHERE id=?', [user.id]);
   const ok = u?.totp_secret && verifyTotp(u.totp_secret, text(fd, 'code'));
-  if (ok) await exec('UPDATE users SET totp_on=1 WHERE id=?', [user.id]);
+  if (ok) {
+    await exec('UPDATE users SET totp_on=1 WHERE id=?', [user.id]);
+    await audit(user.id, 'twostep.on', 'by the member');
+  }
   redirect(`/account/settings?two=${ok ? 'on' : 'bad'}#two-step`);
 }
 
@@ -310,7 +331,10 @@ export async function disableTotpAction(fd: FormData) {
   if (!limit.ok) redirect('/account/settings?two=bad#two-step');
   const [u] = await query<UserRow>('SELECT id, pass_hash, role, totp_secret FROM users WHERE id=?', [user.id]);
   const ok = u?.totp_secret && (await verifyPassword(text(fd, 'password').slice(0, 200), u.pass_hash)) && verifyTotp(u.totp_secret, text(fd, 'code'));
-  if (ok) await exec('UPDATE users SET totp_on=0, totp_secret=NULL WHERE id=?', [user.id]);
+  if (ok) {
+    await exec('UPDATE users SET totp_on=0, totp_secret=NULL WHERE id=?', [user.id]);
+    await audit(user.id, 'twostep.off', 'by the member');
+  }
   redirect(`/account/settings?two=${ok ? 'off' : 'bad'}#two-step`);
 }
 
@@ -324,6 +348,8 @@ export async function forgotPasswordAction(_prev: FormState, fd: FormData): Prom
   const email = text(fd, 'email').trim().toLowerCase().slice(0, 190);
   const ipLimit = rateLimit(`forgot-ip:${await clientIp()}`, 5, 60 * 60_000);
   if (!ipLimit.ok) return tooMany(ipLimit.retryAfterSec);
+  const allLimit = rateLimit('forgot:all', 100, 60 * 60_000); // site-wide ceiling: this form sends email to any address
+  if (!allLimit.ok) return tooMany(allLimit.retryAfterSec);
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.', email };
   const mailLimit = rateLimit(`forgot-mail:${email}`, 3, 60 * 60_000);
   if (!mailLimit.ok) return { ok: SENT }; // same answer, so nobody can probe which emails exist

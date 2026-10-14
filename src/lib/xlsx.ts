@@ -3,6 +3,11 @@ import { inflateRawSync } from 'node:zlib';
 // A small .xlsx reader: enough to read one sheet of text, numbers and dates. No dependencies.
 export type Cell = string | number | null;
 
+// A tiny file can inflate to gigabytes (a "zip bomb"), so every entry and the total are capped well above any real 20,000-row sheet.
+const MAX_ENTRY_BYTES = 30_000_000;
+const MAX_TOTAL_BYTES = 60_000_000;
+const MAX_ENTRIES = 500;
+
 function unzip(buf: Buffer): Map<string, Buffer> {
   let eocd = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65_557); i--) {
@@ -13,8 +18,10 @@ function unzip(buf: Buffer): Map<string, Buffer> {
   }
   if (eocd < 0) throw new Error('This is not an Excel (.xlsx) file.');
   const count = buf.readUInt16LE(eocd + 10);
+  if (count > MAX_ENTRIES) throw new Error('The Excel file has too many parts.');
   let p = buf.readUInt32LE(eocd + 16);
   const files = new Map<string, Buffer>();
+  let total = 0;
   for (let n = 0; n < count; n++) {
     if (buf.readUInt32LE(p) !== 0x02014b50) throw new Error('The Excel file is damaged.');
     const method = buf.readUInt16LE(p + 10);
@@ -26,17 +33,26 @@ function unzip(buf: Buffer): Map<string, Buffer> {
     const name = buf.toString('utf8', p + 46, p + 46 + nameLen);
     const start = local + 30 + buf.readUInt16LE(local + 26) + buf.readUInt16LE(local + 28);
     const raw = buf.subarray(start, start + size);
-    if (method === 0) files.set(name, raw);
-    else if (method === 8) files.set(name, inflateRawSync(raw));
+    if (method !== 0 && method !== 8) {
+      p += 46 + nameLen + extraLen + commentLen;
+      continue;
+    }
+    const data = method === 0 ? raw : inflateRawSync(raw, { maxOutputLength: MAX_ENTRY_BYTES });
+    total += data.length;
+    if (data.length > MAX_ENTRY_BYTES || total > MAX_TOTAL_BYTES) throw new Error('The Excel file is too large when opened.');
+    files.set(name, data);
     p += 46 + nameLen + extraLen + commentLen;
   }
   return files;
 }
 
+const safeChar = (n: number) => (n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : '');
+const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const decode = (s: string) =>
   s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, h) => safeChar(parseInt(h, 16)))
+    .replace(/&#(\d{1,7});/g, (_, d) => safeChar(Number(d)))
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -48,12 +64,18 @@ const col = (ref: string) => [...ref.replace(/\d+/g, '')].reduce((n, c) => n * 2
 
 /** Rows of the first sheet. Empty cells are null; numbers stay numbers. */
 export function readXlsx(buf: Buffer): Cell[][] {
-  const files = unzip(buf);
+  let files: Map<string, Buffer>;
+  try {
+    files = unzip(buf);
+  } catch (err) {
+    // Our own messages are shown as they are; anything else (a damaged or malicious file) gets one plain sentence.
+    throw err instanceof Error && /^(This is not|The Excel file)/.test(err.message) ? err : new Error('The Excel file is damaged.');
+  }
   const get = (n: string) => files.get(n)?.toString('utf8') ?? '';
   const workbook = get('xl/workbook.xml');
   const rid = /<sheet\b[^>]*\br:id="([^"]+)"/.exec(workbook)?.[1];
   const rels = get('xl/_rels/workbook.xml.rels');
-  const target = rid ? new RegExp(`<Relationship\\b[^>]*\\bId="${rid}"[^>]*>`).exec(rels)?.[0].match(/Target="([^"]+)"/)?.[1] : undefined;
+  const target = rid ? new RegExp(`<Relationship\\b[^>]*\\bId="${escapeRe(rid)}"[^>]*>`).exec(rels)?.[0].match(/Target="([^"]+)"/)?.[1] : undefined;
   const path = target ? (target.startsWith('/') ? target.slice(1) : `xl/${target}`) : 'xl/worksheets/sheet1.xml';
   const sheet = get(path);
   if (!sheet) throw new Error('No worksheet found in the Excel file.');

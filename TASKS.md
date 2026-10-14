@@ -128,3 +128,14 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Result source: set RESULT_SOURCE_URL (one fixed address, https or localhost) and the draw form gets "Fetch the latest result from the result source". JSON or page text, strict validation, 8 second timeout, 1.5 MB limit, no redirects, 10 per minute, audit-logged. It only FILLS the form; the admin checks and saves.
 - [ ] Owner: choose and set the result source. I did NOT point it at the Jockey Club's website: its data feed is undocumented (I could not verify its format), and its terms of use must allow automated reading. A licensed or self-hosted feed with the JSON above is the safe route.
 - [x] Browser tests now live in the repo: `tests/e2e/` (16 suites, 300+ checks) with `npm run e2e`; playwright and jsqr are dev dependencies (skipped by Hostinger's production install; `npm run check:deploy` passes).
+
+## Security hardening, 19-point review (nextjs)
+- [x] Headers: CSP (header and meta tag, as Hostinger may overwrite headers), COOP, cross-domain policy, noindex for private areas. Scripts, frames, forms and plugins from other sites are blocked; `unsafe-inline` stays for scripts because Next needs it.
+- [x] Visitor address: `X-Forwarded-For` is only trusted through `TRUSTED_PROXY_HOPS` (default 0); Admin > Health shows what the server sees.
+- [x] Rate limits on every member action (per member) plus site-wide ceilings on sign-up, forgot-password and contact.
+- [x] Audit log now covers events, FAQs, SEO, currencies, the three data exports, staff login, password change and two-step on/off.
+- [x] Uploads: file type by name and by content (zip signature), size caps, zip-bomb limits in the Excel reader, text files must be text.
+- [x] Session cookie is `__Host-` prefixed in production (everyone logs in once after this release). Optional `REQUIRE_STAFF_2FA=1`.
+- [x] Bug fixed: order/user/draw ids like `1e3` or `1;DROP` were read as `1`; ids must now be whole numbers.
+- [x] `tests/e2e/18-security.mjs`: 130 checks (headers, CSP in a real browser, CSRF/Origin, forged action posts without login/role, IDOR, redirects, uploads, limits, audit rows, error pages). Unit tests for client-ip and upload rules.
+- [ ] Owner: check Admin > Health "Visitor address" then set TRUSTED_PROXY_HOPS; turn on your own two-step login before setting REQUIRE_STAFF_2FA=1.

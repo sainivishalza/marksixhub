@@ -17,7 +17,7 @@ const rule = { display: 'flex', flexShrink: 0, width: '100%', borderTop: '2px da
 
 // The receipt is a PNG so it can be saved or shared as it is. It exists only once the admin has accepted the order, and only the owner can fetch it.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const id = parseInt((await params).id, 10);
+  const id = Number(/^\d{1,9}$/.test((await params).id) ? (await params).id : NaN);
   const user = await getUser();
   if (!user || !Number.isInteger(id)) return new Response('Not found', { status: 404 });
   const [order] = await query<RowDataPacket & { draw_no: string; tickets: number; points: number; status: string; created_at: string; order_no: string | null }>(

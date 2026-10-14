@@ -14,7 +14,7 @@ export const metadata = { title: 'Edit draw' };
 
 export default async function EditDrawPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ pn?: string; px?: string }> }) {
   await requireRole('content');
-  const id = parseInt((await params).id, 10);
+  const id = Number(/^\d{1,9}$/.test((await params).id) ? (await params).id : NaN);
   const found = Number.isInteger(id) ? await getDrawFull(id) : null;
   if (!found) notFound();
   const { pn = '', px = '' } = await searchParams;

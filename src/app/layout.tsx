@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Inter, JetBrains_Mono, Playfair_Display } from 'next/font/google';
 import { Analytics } from '@/components/analytics';
 import { JsonLd } from '@/components/json-ld';
+import { cspMeta } from '@/lib/csp';
 import { BASE_URL, IS_STAGING, absolute } from '@/lib/seo';
 import { getSettings } from '@/lib/settings';
 import './globals.css';
@@ -37,6 +38,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const settings = await getSettings();
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable} ${mono.variable} dark`}>
+      <head>
+        {/* The same policy as the header, in case the host rewrites the header. */}
+        <meta httpEquiv="Content-Security-Policy" content={cspMeta(BASE_URL.startsWith('https://'))} />
+      </head>
       <body className="min-h-screen">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-gold focus:px-4 focus:py-2 focus:text-night">
           Skip to content

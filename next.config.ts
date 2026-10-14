@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { cspHeader } from './src/lib/csp';
 
 const host = (() => {
   try {
@@ -35,8 +36,14 @@ const config: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'Content-Security-Policy', value: cspHeader(protocol === 'https:') },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
         ],
       },
+      // Private areas are never for search engines or caches, whatever the page itself says.
+      { source: '/:area(admin|account|pay|login|register|forgot|reset|verify|unsubscribe)/:rest*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
+      { source: '/:area(admin|account|pay|login|register|forgot|reset|verify|unsubscribe)', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
     ];
   },
 };

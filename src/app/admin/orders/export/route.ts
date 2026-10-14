@@ -1,13 +1,15 @@
 import { getDrawOrders } from '@/lib/admin-data';
+import { audit } from '@/lib/audit';
 import { requireRole } from '@/lib/auth';
 import { toCsv } from '@/lib/csv';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  await requireRole('view');
+  const me = await requireRole('view');
   const draw = new URL(request.url).searchParams.get('draw')?.trim() ?? '';
   const { orders } = await getDrawOrders(draw);
+  await audit(me.id, 'export.orders', `orders csv, draw ${draw.slice(0, 20)}`);
   const csv = toCsv([
     ['draw', 'order_no', 'email', 'placed_utc', 'order_points', 'status', 'refunded', 'numbers', 'tickets', 'result_points'],
     ...orders.flatMap((o) =>

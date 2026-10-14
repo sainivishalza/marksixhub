@@ -12,7 +12,7 @@ export const metadata = { title: 'User' };
 export default async function UserDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
   const me = await requireRole('support');
   const { ok, error } = await searchParams;
-  const id = parseInt((await params).id, 10);
+  const id = Number(/^\d{1,9}$/.test((await params).id) ? (await params).id : NaN);
   const [user] = Number.isInteger(id) ? await query<RowDataPacket & { email: string; points: number; blocked: number; email_verified: number; history_years: number; history_from: string | null; created_at: string; last_login_at: string | null }>('SELECT email, points, blocked, email_verified, history_years, history_from, created_at, last_login_at FROM users WHERE id=?', [id]) : [];
   if (!user) notFound();
   const [log, orders] = await Promise.all([
