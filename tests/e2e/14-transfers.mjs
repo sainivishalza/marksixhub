@@ -45,7 +45,7 @@ const pw = 'userpass123456';
 const pages = {};
 async function user(name) {
   const email = `${name}@example.com`;
-  const pg = await (await b.newContext({ viewport: { width: 400, height: 1000 } })).newPage();
+  const pg = await (await b.newContext({ bypassCSP: true, viewport: { width: 400, height: 1000 } })).newPage();
   await pg.goto(BASE + '/register');
   await pg.getByLabel('Email').fill(email);
   await pg.getByLabel('Password').fill(pw);
