@@ -12,7 +12,7 @@ export default async function PointsPage() {
   const user = await requireUser('/account/points');
   const [points, [sum], log] = await Promise.all([
     getPoints(user.id),
-    query<RowDataPacket & { earned: number | null; spent: number | null }>('SELECT SUM(CASE WHEN delta > 0 THEN delta END) AS earned, SUM(CASE WHEN delta < 0 THEN -delta END) AS spent FROM point_log WHERE user_id=?', [user.id]),
+    query<RowDataPacket & { earned: number | null; spent: number | null }>('SELECT SUM(CASE WHEN delta > 0 THEN delta END) AS earned, SUM(CASE WHEN delta < 0 THEN -delta END) AS spent FROM point_log WHERE user_id=? AND reason NOT LIKE \'Transfer %\'', [user.id]),
     query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>('SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 200', [user.id]),
   ]);
   const tile = 'surface p-5';

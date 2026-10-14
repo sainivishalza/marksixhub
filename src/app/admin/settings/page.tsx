@@ -50,6 +50,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
         </Panel>
 
+        <Panel title="Sending points between members">
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" name="transfer_enabled" defaultChecked={s.transferEnabled} className="mt-1" />
+            <span><span className="text-ivory">Members can send points to each other</span><span className="block text-mute">Untick to stop all transfers at once, for example if you see abuse.</span></span>
+          </label>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Field label="Most points in one transfer"><input name="transfer_max" type="number" min={1} defaultValue={s.transferMax} className={inputClass} /></Field>
+            <Field label="Most points one member can send per 24 hours"><input name="transfer_daily" type="number" min={1} defaultValue={s.transferDaily} className={inputClass} /></Field>
+            <Field label="Account must be this many days old to send" hint="Stops brand-new accounts collecting sign-up points into one account."><input name="transfer_min_age_days" type="number" min={0} defaultValue={s.transferMinAgeDays} className={inputClass} /></Field>
+          </div>
+          <p className="mt-3 text-sm"><a href="/admin/transfers" className="text-gold-bright underline underline-offset-4">See recent transfers</a></p>
+        </Panel>
+
         <Panel title="Maintenance mode">
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="maintenance" defaultChecked={s.maintenance} className="mt-1" />

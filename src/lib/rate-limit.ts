@@ -13,4 +13,10 @@ export function rateLimit(key: string, limit: number, windowMs: number, now = Da
   return { ok: true, retryAfterSec: 0 };
 }
 
+/** Looks without counting: is this key already over its limit? Use it before an attempt, and rateLimit() only for the failures. */
+export function isLimited(key: string, limit: number, windowMs: number, now = Date.now()): { limited: boolean; retryAfterSec: number } {
+  const recent = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
+  return recent.length >= limit ? { limited: true, retryAfterSec: Math.ceil((recent[0] + windowMs - now) / 1000) } : { limited: false, retryAfterSec: 0 };
+}
+
 export const resetRateLimits = () => hits.clear();

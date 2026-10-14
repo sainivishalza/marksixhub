@@ -105,3 +105,12 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Trust lines: sign-up page ("Free play only..."), result pages ("Entered by our team from the official result... Tell us").
 - [x] Opt-in draw reminder emails: users.remind / remind_sent, toggle in Account > Settings (off by default), one email per draw when it closes within 24h, only confirmed and unblocked users, signed unsubscribe link (confirm button, no login) and List-Unsubscribe header, privacy text updated.
 - [ ] Not built: product video / animation, weekly statistics email, Chinese version (needs a reviewed translation), real photo or name on About (needs OPERATOR_NAME). Bot screen on the live site is a Hostinger setting (hPanel), not code.
+
+## Points transfer between members with QR (nextjs)
+- [x] Each member has a random pay code (users.pay_code, 10 characters, no look-alikes) and a QR code of https://.../pay/CODE at Account > Send & receive; "Make a new code" replaces it and the old QR stops working.
+- [x] Scan (phone camera) > log in if needed > /pay/CODE shows the recipient's nickname (or "Member 1234", never an email) > amount + password (+ authenticator code for two-step users) > Send. Or paste a code/link on the same page.
+- [x] One database transaction: both rows locked lowest id first, rules checked on the locked balances, both balances and both history lines written together. One-time form id makes double-click/retry send once. 56 end-to-end checks incl. QR decode, races, crossing transfers, daily cap.
+- [x] Safety: confirmed email on both sides, account at least N days old to send, max per transfer, max per 24 hours, 10 attempts per 10 minutes, 5 wrong passwords per 15 minutes (only failures count), admin on/off switch and limits in Settings, Admin > Transfers list, recipient email, blocked/deleted/unconfirmed accounts cannot receive.
+- [x] Bug fixed: deleting an account zeroed the balance without a history line, so Points check flagged it forever; it now writes "Account deleted".
+- [x] Terms, privacy and About updated (points could not be transferred before).
+- [ ] Owner: watch Admin > Transfers for many small transfers into one account (the remaining abuse route is aged accounts feeding one account); lower the daily limit or switch sending off in Settings if you see it.

@@ -23,7 +23,7 @@ export default async function AboutPage() {
 
       <h2 className={h2}>Free play, no money</h2>
       <p>
-        Nothing here costs money and nothing pays out money. Points are free credits you earn by signing up and coming back each day. A ticket costs {s.ticketPoints} points, and winnings are paid back in points. Points cannot be bought, sold or cashed out. To play the real Mark Six you must use the official operator in Hong Kong. See the <Link href="/terms" className={link}>Terms</Link>.
+        Nothing here costs money and nothing pays out money. Points are free credits you earn by signing up and coming back each day. A ticket costs {s.ticketPoints} points, and winnings are paid back in points. Points cannot be bought, sold or cashed out. Members can send points to each other with a personal QR code, within safe limits. To play the real Mark Six you must use the official operator in Hong Kong. See the <Link href="/terms" className={link}>Terms</Link>.
       </p>
 
       <h2 className={h2}>Where the results come from</h2>

@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Coins, LayoutDashboard, Settings, Ticket } from 'lucide-react';
+import { ArrowLeftRight, Coins, LayoutDashboard, Settings, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/account', label: 'Overview', icon: LayoutDashboard },
   { href: '/account/orders', label: 'Orders', icon: Ticket },
   { href: '/account/points', label: 'Points', icon: Coins },
+  { href: '/account/transfer', label: 'Send & receive', icon: ArrowLeftRight },
   { href: '/account/settings', label: 'Settings', icon: Settings },
 ];
 

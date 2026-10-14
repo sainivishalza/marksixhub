@@ -16,6 +16,11 @@ export type Settings = {
   signupPoints: number;
   /** Points won for divisions 1 to 7. */
   prizePoints: number[];
+  /** Member-to-member points transfers: on/off, the most one transfer may send, the most one member may send per 24 hours, and how old (days) an account must be before it can send. */
+  transferEnabled: boolean;
+  transferMax: number;
+  transferDaily: number;
+  transferMinAgeDays: number;
 };
 
 const nat = (v: string | undefined, d: number) => (v !== undefined && /^\d{1,9}$/.test(v) ? Number(v) : d);
@@ -35,6 +40,10 @@ const DEFAULTS: Settings = {
   dailyPoints: 100,
   signupPoints: 1000,
   prizePoints: DEFAULT_PRIZES,
+  transferEnabled: true,
+  transferMax: 1000,
+  transferDaily: 3000,
+  transferMinAgeDays: 3,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -54,6 +63,10 @@ export async function getSettings(): Promise<Settings> {
         historyYearPoints: nat(m.history_year_points, 200),
         dailyPoints: nat(m.daily_points, 100),
         signupPoints: nat(m.signup_points, 1000),
+        transferEnabled: m.transfer_enabled !== '0',
+        transferMax: nat(m.transfer_max, 1000),
+        transferDaily: nat(m.transfer_daily, 3000),
+        transferMinAgeDays: nat(m.transfer_min_age_days, 3),
         prizePoints: DEFAULT_PRIZES.map((d, i) => nat(m.prize_points?.split(',')[i]?.trim(), d)),
       };
     } catch (err) {
@@ -76,6 +89,10 @@ export async function saveSettings(s: Settings) {
     ['daily_points', String(s.dailyPoints)],
     ['signup_points', String(s.signupPoints)],
     ['prize_points', s.prizePoints.join(',')],
+    ['transfer_enabled', s.transferEnabled ? '1' : '0'],
+    ['transfer_max', String(s.transferMax)],
+    ['transfer_daily', String(s.transferDaily)],
+    ['transfer_min_age_days', String(s.transferMinAgeDays)],
   ];
   for (const [k, v] of rows) await exec('REPLACE INTO settings (k, v) VALUES (?,?)', [k, v]);
   cache = null;

@@ -271,6 +271,10 @@ export async function saveSettingsAction(fd: FormData) {
     dailyPoints: int(fd, 'daily_points'),
     signupPoints: int(fd, 'signup_points'),
     prizePoints: Array.from({ length: 7 }, (_, i) => int(fd, `prize_${i + 1}`)),
+    transferEnabled: Boolean(fd.get('transfer_enabled')),
+    transferMax: Math.max(1, int(fd, 'transfer_max')),
+    transferDaily: Math.max(1, int(fd, 'transfer_daily')),
+    transferMinAgeDays: int(fd, 'transfer_min_age_days'),
   });
   await audit(me.id, 'settings.save', 'site and points settings');
   back('/admin/settings', 'ok', 'Settings saved.');

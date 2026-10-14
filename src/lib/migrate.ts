@@ -236,6 +236,20 @@ export async function migrate() {
 
   if (!(await hasColumn('users', 'remind'))) await exec("ALTER TABLE users ADD COLUMN remind TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN remind_sent VARCHAR(8) NULL");
 
+  // Member-to-member points transfers. Plain integer columns, no foreign keys: the record must survive even if an account is ever removed.
+  await exec(`CREATE TABLE IF NOT EXISTS transfers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    from_user INT NOT NULL,
+    to_user INT NOT NULL,
+    amount INT NOT NULL,
+    idem CHAR(36) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_idem (idem),
+    KEY idx_from (from_user, created_at),
+    KEY idx_to (to_user)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  if (!(await hasColumn('users', 'pay_code'))) await exec('ALTER TABLE users ADD COLUMN pay_code CHAR(10) NULL, ADD UNIQUE KEY uq_pay_code (pay_code)');
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 

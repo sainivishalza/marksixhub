@@ -126,3 +126,14 @@ test('winning units keep one decimal and accept commas', () => {
   assert.equal(r.value.prizes[6].winners, 71865.9, 'rounded to one decimal');
   assert.equal(r.value.prizes[0].winners, 0, 'blank means nobody won');
 });
+
+test('isLimited only looks; it never counts an attempt', async () => {
+  const { isLimited } = await import('../src/lib/rate-limit.ts');
+  resetRateLimits();
+  for (let i = 0; i < 20; i++) assert.equal(isLimited('peek', 3, 1000, 1000).limited, false);
+  for (let i = 0; i < 3; i++) rateLimit('peek', 3, 1000, 1000 + i);
+  const l = isLimited('peek', 3, 1000, 1500);
+  assert.equal(l.limited, true);
+  assert.ok(l.retryAfterSec >= 1);
+  assert.equal(isLimited('peek', 3, 1000, 3000).limited, false);
+});

@@ -44,3 +44,6 @@ Reminders are marketing-adjacent, so they are off by default and only for confir
 
 ## Logo uses flat fills
 The header renders the logo twice (phone and desktop). Gradient ids would collide and the copy inside a display:none block breaks the gradient on the visible one, so the SVG uses solid colours.
+
+## Points transfers: what protects them
+Points have no cash value, so the risk is not theft but farming and a hidden market (sell points for money, or funnel many sign-up bonuses into one account). Controls: confirmed email, minimum account age (default 3 days), per-transfer and per-day caps (1000 / 3000), password on every send (and authenticator code if 2FA is on), the admin kill switch, and the Admin > Transfers list. The pay code is random and separate from the user id and email; scanning it only lets someone send points TO you. A transfer is atomic (both balances and both history lines or nothing), idempotent (one-time form id) and deadlock-free (locks taken in id order). The attempt limiter counts only wrong passwords, otherwise real use would lock people out. Not done: a camera scanner inside the site (the phone camera app opens the link), notes on transfers (abuse and personal data), and reversing transfers (admin can adjust points by hand).

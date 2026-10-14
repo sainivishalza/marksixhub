@@ -117,11 +117,14 @@ export async function deleteAccountAction(_prev: FormState, fd: FormData): Promi
   if (Number(open.n) > 0) return { error: 'You have an order waiting for approval. Please wait until it is approved or rejected, then delete your account.' };
 
   await tx(async (c) => {
+    // The balance is forgotten, so the history must say so too, or Points check would flag this account forever.
+    const [bal] = await c.query<RowDataPacket & { points: number }>('SELECT points FROM users WHERE id=? FOR UPDATE', [user.id]);
+    if (Number(bal?.points) > 0) await c.exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [user.id, -Number(bal.points), 'Account deleted']);
     await c.exec('DELETE FROM favourites WHERE user_id=?', [user.id]);
     await c.exec('DELETE FROM password_resets WHERE user_id=?', [user.id]);
     await c.exec('DELETE FROM email_tokens WHERE user_id=?', [user.id]);
     await c.exec(
-      "UPDATE users SET email=?, pass_hash=?, nickname=NULL, signup_ip=NULL, totp_secret=NULL, totp_on=0, blocked=1, points=0, pending_bonus=0 WHERE id=?",
+      "UPDATE users SET email=?, pass_hash=?, nickname=NULL, pay_code=NULL, signup_ip=NULL, totp_secret=NULL, totp_on=0, blocked=1, points=0, pending_bonus=0 WHERE id=?",
       [`deleted-${user.id}@deleted.invalid`, `x$${randomBytes(24).toString('hex')}`, user.id],
     );
   });
