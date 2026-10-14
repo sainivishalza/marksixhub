@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { CalendarDays, History, ShieldAlert, Scale, ChevronsLeft, ChevronsRight, CircleDollarSign, FileText, Gauge, Globe, HelpCircle, LogOut, Menu, Search, Settings, Ticket, Users, X } from 'lucide-react';
+import { CalendarDays, History, ShieldAlert, Scale, ChevronsLeft, ChevronsRight, CircleDollarSign, FileText, Gauge, Globe, HeartPulse, HelpCircle, LogOut, Menu, Search, Settings, Ticket, Users, X } from 'lucide-react';
 import { logoutAction } from '@/actions/account';
 import { can, type Level, type Role } from '@/lib/perms';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ const NAV: { href: string; label: string; icon: typeof Gauge; level: Level }[] =
   { href: '/admin/users', label: 'Users', icon: Users, level: 'support' },
   { href: '/admin/audit', label: 'Audit log', icon: History, level: 'manage' },
   { href: '/admin/logins', label: 'Failed logins', icon: ShieldAlert, level: 'manage' },
+  { href: '/admin/health', label: 'Health check', icon: HeartPulse, level: 'manage' },
   { href: '/admin/points-check', label: 'Points check', icon: Scale, level: 'manage' },
   { href: '/admin/currencies', label: 'Currencies', icon: CircleDollarSign, level: 'manage' },
   { href: '/admin/settings', label: 'Settings', icon: Settings, level: 'manage' },

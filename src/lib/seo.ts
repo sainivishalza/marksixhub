@@ -5,6 +5,10 @@ export const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'info@marksixhub.com';
 /** Optional. Shown (and tap-to-call) in the footer only when set. */
 export const CONTACT_PHONE = process.env.CONTACT_PHONE || '';
 
+/** Who runs the site. Shown on the About page and in the footer only when set; never invented. */
+export const OPERATOR_NAME = process.env.OPERATOR_NAME || '';
+export const OPERATOR_ADDRESS = process.env.OPERATOR_ADDRESS || '';
+
 export const BASE_URL = (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Any site served from staging.* is a test copy and must stay out of search results.

@@ -10,4 +10,14 @@ export async function register() {
   await migrate()
     .then(() => console.log('startup: database ready'))
     .catch((err) => console.error('Database migration failed:', err));
+
+  // Daily health email: check every 30 minutes; sendDailyDigest sends at most once a day and only when something needs a look.
+  const g = globalThis as { __healthTimer?: ReturnType<typeof setInterval> };
+  if (!g.__healthTimer) {
+    const { sendDailyDigest } = await import('./lib/health');
+    const run = () => void sendDailyDigest().catch((err) => console.error('daily health email failed:', err));
+    g.__healthTimer = setInterval(run, Number(process.env.HEALTH_INTERVAL_MS) || 30 * 60_000);
+    g.__healthTimer.unref();
+    setTimeout(run, 60_000).unref(); // also soon after a restart, so a deploy never skips the morning email
+  }
 }

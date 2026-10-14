@@ -35,3 +35,6 @@ Deleting an account renames the email to deleted-<id>@deleted.invalid and clears
 
 ## Analytics needs consent
 Google Analytics sets cookies, so it loads only after the visitor accepts (localStorage `mh-analytics`). Essential cookies (login, currency) need no banner. Plausible is cookieless and is not gated.
+
+## Daily health email uses an in-process timer
+Hostinger Node hosting has no cron, so instrumentation.ts runs a 30-minute timer (unref'd, one per process). The day is claimed with an UPDATE on settings.health_digest before sending, so restarts or two processes cannot send twice. Quiet days send nothing. HEALTH_INTERVAL_MS exists only so tests can shorten the timer.

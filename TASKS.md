@@ -85,3 +85,9 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Cookie notice shown only when GA_MEASUREMENT_ID is set; Google Analytics loads only after Accept, choice kept in localStorage.
 - [x] Privacy (host, retention, deletion, analytics) and Terms (no payments, no refunds) updated; counselling line in the footer; /.well-known/security.txt.
 - [ ] Owner: legal name/company + contact address for the footer and Terms (not invented); verify the 1834 633 counselling number is current; have a lawyer read Privacy/Terms before launch.
+
+## About page + health check (nextjs)
+- [x] /about: what the site is, free play only, where results come from, how an order is handled, no predictions, contact. "Who runs the site" appears only when OPERATOR_NAME (and optional OPERATOR_ADDRESS) are set in the environment; the footer shows the same line. Linked from the footer, in the sitemap, AboutPage JSON-LD.
+- [x] Admin > Health check (manage level): database, email settings, open draw, results not entered, orders pending for closed draws, orders waiting over 24h, points balances vs history, staff without two-step login, ADMIN_PASSWORD still set, https.
+- [x] Daily email at 8am Hong Kong time or later (checked every 30 min and 1 min after start) to HEALTH_ALERT_EMAIL, else ORDER_ALERT_EMAIL, else ADMIN_EMAIL; only when something needs a look; one per day, claimed in the settings table so two processes never double-send.
+- [ ] Owner: set OPERATOR_NAME/OPERATOR_ADDRESS (and HEALTH_ALERT_EMAIL) on Hostinger; check the "where results come from" wording matches how you really enter results.

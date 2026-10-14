@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CONTACT_EMAIL, CONTACT_PHONE, SITE_NAME } from '@/lib/seo';
+import { CONTACT_EMAIL, CONTACT_PHONE, OPERATOR_ADDRESS, OPERATOR_NAME, SITE_NAME } from '@/lib/seo';
 
 const LINKS = [
   { href: '/picker', label: 'Number picker' },
@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/check', label: 'Number checker' },
   { href: '/faq', label: 'FAQ' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
@@ -34,6 +35,7 @@ export function SiteFooter({ siteName = SITE_NAME }: { siteName?: string }) {
               </>
             ) : null}
           </p>
+          {OPERATOR_NAME ? <p>Run by {OPERATOR_NAME}{OPERATOR_ADDRESS ? `, ${OPERATOR_ADDRESS}` : ''}.</p> : null}
           <p>Prize amounts in other currencies are indicative conversions from Hong Kong dollars.</p>
         </div>
         <nav aria-label="Footer" className="flex flex-col gap-2 text-sm">
