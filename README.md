@@ -22,3 +22,8 @@ Roles: viewer (look only), editor (draws, events, FAQs, SEO), admin (also users,
 
 ## Layout
 `src/app/(site)` public pages, `src/app/admin` admin, `src/actions` server actions (each checks the user's role), `src/lib` logic, `legacy-express/` the old Express app (reference only).
+
+## Tests
+- `npm test`: fast unit tests (`tests/*.test.ts`), no database needed.
+- `npm run check:deploy`: rehearses the Hostinger production install and build in a clean copy. Run it before merging to `main`.
+- `npm run e2e`: all browser tests (`tests/e2e/`) against a real local MariaDB, about 25 minutes. Needs a root-capable `mariadb` command and a browser (`npx playwright install chromium`, or set `CHROMIUM_PATH`). `npm run e2e -- 14 16` runs only suites 14 and 16. The paid 9-year history import was tested with a private dataset that is not in the repository.
