@@ -50,3 +50,6 @@ Points have no cash value, so the risk is not theft but farming and a hidden mar
 
 ## Type packages must stay in `dependencies`
 Hostinger installs with NODE_ENV=production, which skips devDependencies, and `next build` runs the TypeScript check there. A `@types/*` package in devDependencies therefore fails the live build ("Could not find a declaration file") and the old version stays up. Every type package the app imports from stays in `dependencies`. Check any dependency change with a clean clone: `NODE_ENV=production SKIP_BUILD=1 npm install && NODE_ENV=production npx next build --webpack`.
+
+## react-is is a direct dependency
+Hostinger retries a failed install with `--legacy-peer-deps`, which does not install peer dependencies. recharts needs `react-is`, so the retry failed the build on top of the original error. It is now listed in `dependencies`. Both `npm install` and `npm install --legacy-peer-deps` were tested in a clean production-style copy.
