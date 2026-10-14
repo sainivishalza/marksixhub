@@ -1,3 +1,4 @@
+// Plain JavaScript on purpose: next.config.ts imports it, and the host compiles that config on its own, without resolving .ts imports.
 // Content Security Policy. Next.js needs inline scripts to start the page, so 'unsafe-inline' stays for scripts and styles; what the policy
 // still blocks is the dangerous part: loading scripts from any other site, framing the site, posting forms elsewhere, plugins, and <base> tricks.
 // Only the analytics hosts the site may use are allowed (and only load if the owner turns them on).
@@ -19,7 +20,10 @@ const base = [
 ];
 
 /** The full header. `frame-ancestors` is only valid in a header, not in a <meta> tag. */
-export const cspHeader = (https: boolean) => [...base, "frame-ancestors 'none'", ...(https ? ['upgrade-insecure-requests'] : [])].join('; ');
+const cspHeader = (https) => [...base, "frame-ancestors 'none'", ...(https ? ['upgrade-insecure-requests'] : [])].join('; ');
 
 /** The same policy for a <meta http-equiv> tag, as a second line of defence if the host rewrites the header. */
-export const cspMeta = (https: boolean) => [...base, ...(https ? ['upgrade-insecure-requests'] : [])].join('; ');
+const cspMeta = (https) => [...base, ...(https ? ['upgrade-insecure-requests'] : [])].join('; ');
+
+
+module.exports = { cspHeader, cspMeta };

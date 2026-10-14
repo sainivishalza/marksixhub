@@ -71,3 +71,6 @@ The `__Host-` prefix forces Secure, path `/` and no Domain, so a sibling subdoma
 
 ## No row-level security, buckets or webhooks
 MySQL has no RLS; every query is scoped by the session user id in SQL. The site has no file storage buckets and no inbound webhooks. Uploads are parsed in memory and never stored.
+
+## next.config.ts may only import plain .js files
+Hostinger compiles next.config.ts to next.config.compiled.js on its own (WASM SWC) and cannot resolve an import of a .ts file: the first security release failed to build with "Cannot find /src/lib/csp" and the old version kept serving. The CSP text lives in `src/lib/csp.js` (with `csp.d.ts` for TypeScript). `npm run check:deploy` fails if the config imports anything else; the local rehearsal could not catch it because this machine's Node resolves .ts.

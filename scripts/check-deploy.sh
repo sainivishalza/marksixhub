@@ -6,6 +6,8 @@ set -u
 cd "$(dirname "$0")/.."
 export BASE_URL="${BASE_URL:-https://marksixhub.com}" SESSION_SECRET="${SESSION_SECRET:-0123456789abcdef0123456789abcdef0123}" NODE_ENV=production
 fail=0
+# Hostinger compiles next.config.ts by itself and cannot resolve imports of .ts files (this broke a deploy): relative imports must be plain .js files.
+if grep -nE "from '\.{1,2}/" next.config.ts | grep -vE "\.(js|json)'"; then echo "   FAILED: next.config.ts imports a file that is not .js"; fail=1; fi
 for mode in "" "--legacy-peer-deps"; do
   dir="$(mktemp -d)"
   git ls-files -z --cached --others --exclude-standard | xargs -0 -I{} cp --parents {} "$dir"/ 2>/dev/null

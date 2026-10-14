@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import { cspHeader } from './src/lib/csp';
+import { cspHeader } from './src/lib/csp.js';
 
 const host = (() => {
   try {
