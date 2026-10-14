@@ -17,7 +17,9 @@ export default function PrivacyPage() {
         IP address used at sign-up and log-in, which we use only to limit abuse. Points are free play credits with no cash value.
       </p>
       <h2 className="pt-4 text-2xl text-ivory">Cookies</h2>
-      <p>One signed cookie keeps you logged in and one remembers your currency. We use no advertising or tracking cookies.</p>
+      <p>One signed cookie keeps you logged in and one remembers your currency. We use no advertising cookies.</p>
+      <h2 className="pt-4 text-2xl text-ivory">Visitor statistics</h2>
+      <p>We may use Google Analytics or Plausible to count visits and see which pages are read. Neither is used to show you adverts, and we ask Google Analytics to shorten visitor IP addresses.</p>
       <h2 className="pt-4 text-2xl text-ivory">Email</h2>
       <p>We email you only for things you ask for: verification, password reset and updates on your tickets.</p>
       <h2 className="pt-4 text-2xl text-ivory">Your choices</h2>

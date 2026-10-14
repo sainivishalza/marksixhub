@@ -29,6 +29,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title: `Mark Six Result ${draw.drawNo}, ${dateLabel(draw.drawDate, { weekday: undefined })}`,
     description: `Mark Six draw ${draw.drawNo} winning numbers: ${draw.numbers.join(', ')} with extra number ${draw.extra}. Full prize breakdown for all 7 divisions.`,
     path: `/results/${slug}`,
+    ownImage: true,
   });
 }
 

@@ -10,6 +10,9 @@ const serif = Playfair_Display({ subsets: ['latin'], variable: '--font-serif', d
 const sans = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
 
+// Only a Google Analytics 4 id such as G-ABC123XYZ is accepted, so nothing else can be injected into the page.
+const GA_ID = /^G-[A-Z0-9]{4,20}$/.test(process.env.GA_MEASUREMENT_ID ?? '') ? process.env.GA_MEASUREMENT_ID : '';
+
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   const title = `Mark Six Number Picker & Results | ${s.siteName}`;
@@ -20,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: s.siteName,
     keywords: ['Mark Six results', 'Mark Six number picker', 'HK Mark Six', '六合彩', 'Mark Six jackpot HKD', 'Mark Six quick pick'],
     alternates: { canonical: '/' },
+    verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
     robots: IS_STAGING ? { index: false, follow: false } : undefined,
     openGraph: { type: 'website', siteName: s.siteName, title, description: s.siteDescription, url: '/', locale: 'en_HK' },
     twitter: { card: 'summary_large_image' },
@@ -37,6 +41,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to content
         </a>
         {children}
+        {GA_ID && !IS_STAGING ? (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="ga4" strategy="afterInteractive">{`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}',{anonymize_ip:true});`}</Script>
+          </>
+        ) : null}
         {process.env.PLAUSIBLE_DOMAIN && !IS_STAGING ? <Script defer data-domain={process.env.PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" strategy="afterInteractive" /> : null}
         <JsonLd data={{ '@context': 'https://schema.org', '@type': 'WebSite', name: settings.siteName, url: absolute('/'), inLanguage: 'en' }} />
       </body>

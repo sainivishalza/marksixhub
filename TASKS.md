@@ -71,3 +71,10 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Each result page has "Draw at a glance" (odd/even, low/high, sum, runs, colours, repeats from the previous draw, links to the draws either side). All worked out from the data, no filler text.
 - [x] 六合彩 in the home and results titles/descriptions and a zh-HK line in the hero.
 - [ ] Owner: add the site in Google Search Console and submit /sitemap.xml; real author/About page needs the owner's name and background.
+
+## Boss review prep (nextjs)
+- [x] Share preview fixed: every page named no og:image (only result pages had one), so WhatsApp/Facebook showed no picture. pageMetadata now sets the 1200x630 image (56 KB).
+- [x] Contact page + form (/contact): emails CONTACT_EMAIL with Reply-To, honeypot, 3/hour/IP limit, keeps typed text, honest error if mail fails. Tested against a local SMTP sink.
+- [x] iPhone Safari: fields under 16px made the page zoom on focus (contact, forgot, settings); all fields are 16px on phones now.
+- [x] Optional Google Analytics 4 (GA_MEASUREMENT_ID) and Search Console meta tag (GOOGLE_SITE_VERIFICATION), both off until set; privacy text updated.
+- [ ] Owner: set GA_MEASUREMENT_ID + GOOGLE_SITE_VERIFICATION on Hostinger, verify in Search Console and submit /sitemap.xml; turn on Hostinger backups (hPanel > Backups) and download the admin JSON backup; test in real Safari on an iPhone.

@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/check', label: 'Number checker' },
   { href: '/faq', label: 'FAQ' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/contact', label: 'Contact' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
 ];
@@ -25,7 +26,7 @@ export function SiteFooter({ siteName = SITE_NAME }: { siteName?: string }) {
           </p>
           <p>Play responsibly. Gambling can be addictive and is for adults only. Never spend money you cannot afford to lose.</p>
           <p>
-            Contact: <a href={`mailto:${CONTACT_EMAIL}`} className="inline-block py-2 text-gold-bright hover:underline">{CONTACT_EMAIL}</a>
+            Email: <a href={`mailto:${CONTACT_EMAIL}`} className="inline-block py-2 text-gold-bright hover:underline">{CONTACT_EMAIL}</a>
             {CONTACT_PHONE ? (
               <>
                 {' · '}

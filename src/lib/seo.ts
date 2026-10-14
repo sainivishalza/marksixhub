@@ -12,16 +12,21 @@ export const IS_STAGING = new URL(BASE_URL).hostname.startsWith('staging.');
 
 export const absolute = (path: string) => `${BASE_URL}${path}`;
 
-type PageMeta = { title: string; description: string; path: string; noindex?: boolean };
+type PageMeta = { title: string; description: string; path: string; noindex?: boolean; ownImage?: boolean };
 
-export function pageMetadata({ title, description, path, noindex }: PageMeta): Metadata {
+// Setting openGraph on a page replaces the site-wide preview image, so every page names it again (WhatsApp, Facebook and X read it).
+// A page with its own opengraph-image file passes `ownImage` and keeps that one.
+const SHARE_IMAGE = { url: '/opengraph-image', width: 1200, height: 630, alt: 'Mark Six Hub: free Mark Six number picker and results' };
+
+export function pageMetadata({ title, description, path, noindex, ownImage }: PageMeta): Metadata {
+  const images = ownImage ? {} : { images: [SHARE_IMAGE] }; // no `images` key at all, or the page's own opengraph-image file is dropped
   return {
     title,
     description,
     alternates: { canonical: path },
     robots: noindex ? { index: false, follow: false } : undefined,
-    openGraph: { title, description, url: path, siteName: SITE_NAME, type: 'website', locale: 'en_HK' },
-    twitter: { card: 'summary_large_image', title, description },
+    openGraph: { title, description, url: path, siteName: SITE_NAME, type: 'website', locale: 'en_HK', ...images },
+    twitter: { card: 'summary_large_image', title, description, ...images },
   };
 }
 
