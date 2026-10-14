@@ -25,3 +25,10 @@ export async function register() {
     setTimeout(run, 60_000).unref(); // also soon after a restart, so a deploy never skips the morning email
   }
 }
+
+// Next.js calls this for every unexpected server error (render, route handler, server action).
+export async function onRequestError(err: unknown, request: { path: string }) {
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
+  const { alertError } = await import('./lib/error-alert');
+  await alertError(err, request.path);
+}

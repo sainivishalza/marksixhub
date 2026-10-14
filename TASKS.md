@@ -114,3 +114,10 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Bug fixed: deleting an account zeroed the balance without a history line, so Points check flagged it forever; it now writes "Account deleted".
 - [x] Terms, privacy and About updated (points could not be transferred before).
 - [ ] Owner: watch Admin > Transfers for many small transfers into one account (the remaining abuse route is aged accounts feeding one account); lower the daily limit or switch sending off in Settings if you see it.
+
+## Safety net (nextjs)
+- [x] `npm run check:deploy`: rehearses Hostinger's production install + build (normal and --legacy-peer-deps) in a clean copy. Verified it fails on the exact mistake that broke the live build (type package in devDependencies).
+- [x] Server error alerts: Next's onRequestError emails the owner (HEALTH_ALERT_EMAIL > ORDER_ALERT_EMAIL > ADMIN_EMAIL), at most one email per 10 minutes and the same error once an hour; no query string, cookies or body. 11 e2e checks.
+- [x] Dependencies: minor/patch updates applied. `npm audit` still lists 8 issues, all in Tailwind 3's build-time chain (braces, micromatch, postcss-selector-parser); no fix exists short of a Tailwind 4 migration, and none run at request time.
+- [x] Admin dashboard: transfers in the last 24 hours and members with draw reminders.
+- [ ] Not done: friend invite link, weekly leaderboard reset, achievements, in-site QR scanner, Chinese version (need your decisions or a translator).

@@ -4,7 +4,9 @@ import { Countdown } from '@/components/countdown';
 import { PicksChart } from '@/components/admin/picks-chart';
 import { buttonVariants } from '@/components/ui/button';
 import { getAlerts, getDashboard } from '@/lib/admin-data';
+import type { RowDataPacket } from 'mysql2/promise';
 import { requireRole } from '@/lib/auth';
+import { query } from '@/lib/db';
 import { can } from '@/lib/perms';
 import { openDraw } from '@/lib/points';
 
@@ -12,7 +14,13 @@ export const metadata = { title: 'Dashboard' };
 
 export default async function DashboardPage() {
   const user = await requireRole('view');
-  const [d, alerts, open] = await Promise.all([getDashboard(), can(user.role, 'manage') ? getAlerts() : Promise.resolve([]), openDraw()]);
+  const [d, alerts, open, [xfer], [remind]] = await Promise.all([
+    getDashboard(),
+    can(user.role, 'manage') ? getAlerts() : Promise.resolve([]),
+    openDraw(),
+    query<RowDataPacket & { n: number; pts: number }>('SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS pts FROM transfers WHERE created_at > NOW() - INTERVAL 1 DAY'),
+    query<RowDataPacket & { n: number }>('SELECT COUNT(*) AS n FROM users WHERE remind=1 AND email_verified=1 AND blocked=0'),
+  ]);
   return (
     <>
       <PageHeader title="Dashboard" description="A quick look at the site today.">
@@ -50,6 +58,8 @@ export default async function DashboardPage() {
         <StatCard label="Orders today" value={d.ordersToday} hint={`${d.ticketsToday} tickets`} />
         <StatCard label="Points held by users" value={d.pointsHeld} />
         <StatCard label="Points paid as winnings" value={d.pointsWon} hint="All time" />
+        <StatCard label="Transfers, last 24 hours" value={Number(xfer.n)} hint={`${Number(xfer.pts).toLocaleString('en-US')} points moved`} />
+        <StatCard label="Members with draw reminders" value={Number(remind.n)} hint="Opted in, email confirmed" />
         <StatCard label="Page views" value={process.env.PLAUSIBLE_DOMAIN ? "Plausible" : "Not tracked"} hint={process.env.PLAUSIBLE_DOMAIN ? "See plausible.io for visitor stats" : "Set PLAUSIBLE_DOMAIN to turn on visitor stats"} className="col-span-2 lg:col-span-1" />
       </div>
 

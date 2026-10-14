@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types \"tests/*.test.ts\"",
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "check:deploy": "bash scripts/check-deploy.sh"
   },
   "engines": {
     "node": ">=20.9"
