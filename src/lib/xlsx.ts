@@ -98,7 +98,9 @@ export function readXlsx(buf: Buffer): Cell[][] {
         else if (type === 'b') value = Number(v);
         else value = Number(v);
       }
-      row[ref ? col(ref) : row.length] = value;
+      const at = ref ? col(ref) : row.length;
+      if (at >= 16384) throw new Error('The Excel file is damaged.');
+      row[at] = value;
     }
     rows.push(Array.from(row, (x) => x ?? null));
   }

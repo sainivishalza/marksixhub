@@ -80,15 +80,18 @@ export async function touchLogin(userId: number) {
   await exec('UPDATE users SET last_login_at = UTC_TIMESTAMP() WHERE id=?', [userId]);
 }
 
+/** Proxies in front of the app: 1 unless TRUSTED_PROXY_HOPS says otherwise (0 = trust the first entry, which a visitor can forge). */
+const proxyHops = () => { const n = Number(process.env.TRUSTED_PROXY_HOPS); return process.env.TRUSTED_PROXY_HOPS && Number.isInteger(n) && n >= 0 ? n : 1; };
+
 export async function clientIp(): Promise<string> {
   const h = await headers();
-  return pickClientIp(h.get('x-forwarded-for'), h.get('x-real-ip'), Number(process.env.TRUSTED_PROXY_HOPS) || 0);
+  return pickClientIp(h.get('x-forwarded-for'), h.get('x-real-ip'), proxyHops());
 }
 
 /** What the proxies told us, for the admin Health page: the raw header and the address chosen from it. */
 export async function clientIpDiagnostics(): Promise<{ chain: string; chosen: string; hops: number }> {
   const h = await headers();
-  const hops = Number(process.env.TRUSTED_PROXY_HOPS) || 0;
+  const hops = proxyHops();
   return { chain: h.get('x-forwarded-for') ?? h.get('x-real-ip') ?? '(none)', chosen: pickClientIp(h.get('x-forwarded-for'), h.get('x-real-ip'), hops), hops };
 }
 

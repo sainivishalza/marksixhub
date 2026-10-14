@@ -126,6 +126,8 @@ export async function toggleDrawStatusAction(fd: FormData) {
 
 export async function deleteDrawAction(fd: FormData) {
   const me = await requireRole('content');
+  const [used] = await query<RowDataPacket & { n: number }>('SELECT COUNT(*) n FROM orders o JOIN draws d ON d.draw_no=o.draw_no WHERE d.id=?', [int(fd, 'id')]);
+  if (used?.n) back('/admin/draws', 'error', 'This draw has orders, so it cannot be deleted. Change its status instead.');
   await exec('DELETE FROM draws WHERE id=?', [int(fd, 'id')]);
   await audit(me.id, 'draw.delete', `id ${int(fd, 'id')}`);
   back('/admin/draws', 'ok', 'Draw deleted.');

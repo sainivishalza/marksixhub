@@ -24,7 +24,7 @@ export default async function HealthPage() {
     status: ip.hops > 0 ? 'ok' : 'warn',
     detail: ip.hops > 0
       ? `The app sees your address as ${ip.chosen} (proxy chain: ${ip.chain}; ${ip.hops} trusted proxy hop${ip.hops === 1 ? '' : 's'}).`
-      : `The app sees: ${ip.chain}. If that shows your own address as the LAST entry, set TRUSTED_PROXY_HOPS to the number of proxies (usually 1) in the hosting settings, so a visitor cannot forge their address to get around the rate limits. Until then the first entry is used.`,
+      : `The app sees: ${ip.chain}. If that shows your own address as the LAST entry, set TRUSTED_PROXY_HOPS to the number of proxies (usually 1) in the hosting settings, so a visitor cannot forge their address to get around the rate limits. The default is 1; set 0 only if the list shows a single entry that is always the visitor.`,
   });
   checks.push({
     id: 'staff2fa',

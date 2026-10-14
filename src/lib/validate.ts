@@ -104,4 +104,4 @@ export const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,120}\.[^\s@]{2,}$/;
 export const passwordProblem = (p: string) => (p.length < 10 ? 'Use at least 10 characters.' : p.length > 200 ? 'Use at most 200 characters.' : null);
 
 /** Only same-site paths are allowed as redirect targets. */
-export const safeNext = (n: unknown, fallback = '/') => (typeof n === 'string' && /^\/(?![/\\])/.test(n) ? n : fallback);
+export const safeNext = (n: unknown, fallback = '/') => (typeof n === 'string' && /^\/(?![/\\])[^\\\x00-\x1f\x7f]*$/.test(n) ? n : fallback);

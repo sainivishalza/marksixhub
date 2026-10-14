@@ -63,8 +63,8 @@ The address comes from RESULT_SOURCE_URL only, so no visitor or admin input can 
 ## CSP keeps 'unsafe-inline' for scripts
 Next.js emits inline scripts for hydration; a nonce needs per-request rendering of every page, which would drop static caching. Everything else is locked (no outside scripts, frames, forms, plugins, base tag). The policy is also a meta tag because Hostinger may overwrite headers.
 
-## Forwarded-for is distrusted by default
-Anyone can send `X-Forwarded-For`, which would let them dodge IP rate limits. The app uses the real socket address unless TRUSTED_PROXY_HOPS says how many proxies are ours; then it counts from the right.
+## Forwarded-for: one proxy hop by default
+Anyone can send `X-Forwarded-For`; the left-most entries are what the visitor typed. The app counts from the right and assumes one proxy (TRUSTED_PROXY_HOPS, 0 = first entry). Risk if the host has more proxies: visitors share the proxy's address and share rate limits; Admin > Health shows the chain so the number can be corrected.
 
 ## Session cookie renamed `__Host-mh_session`
 The `__Host-` prefix forces Secure, path `/` and no Domain, so a sibling subdomain cannot set or overwrite it. Cost: one forced re-login at release.

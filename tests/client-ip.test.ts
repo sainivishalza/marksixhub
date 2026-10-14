@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pickClientIp } from '../src/lib/client-ip.ts';
 
-test('default keeps the first entry (unchanged behaviour)', () => {
+test('hops 0 keeps the first entry', () => {
   assert.equal(pickClientIp('1.1.1.1, 2.2.2.2', null), '1.1.1.1');
-  assert.equal(pickClientIp('1.1.1.1', null), '1.1.1.1');
+  assert.equal(pickClientIp('1.1.1.1', null, 0), '1.1.1.1');
 });
 
 test('with one trusted proxy the entry it added (the last) is used, so a forged first entry is ignored', () => {
@@ -27,4 +27,11 @@ test('fewer entries than hops uses the first; no header falls back to x-real-ip,
 test('junk is trimmed and capped', () => {
   assert.equal(pickClientIp('  1.1.1.1  ,   ', null), '1.1.1.1');
   assert.equal(pickClientIp('x'.repeat(500), null).length, 64);
+});
+
+import { safeNext } from '../src/lib/validate.ts';
+
+test('safeNext keeps same-site paths and refuses tricks browsers read as another site', () => {
+  assert.equal(safeNext('/account/orders?x=1'), '/account/orders?x=1');
+  for (const bad of ['//evil.com', '/\\evil.com', '/\t/evil.com', '/\n/evil.com', '/\r/evil.com', 'https://evil.com', 'javascript:alert(1)', '']) assert.equal(safeNext(bad), '/', JSON.stringify(bad));
 });
