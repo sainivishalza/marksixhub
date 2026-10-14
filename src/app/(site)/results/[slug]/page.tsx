@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { DrawGlance } from '@/components/draw-glance';
 import { JsonLd } from '@/components/json-ld';
 import { ResultStub } from '@/components/result-stub';
 import { UnlockPanel } from '@/components/unlock-panel';
 import { getUser } from '@/lib/auth';
-import { getCurrentCurrency, getDrawByNo, getPrizes } from '@/lib/data';
+import { getCurrentCurrency, getDrawByNo, getNeighbours, getPrizes } from '@/lib/data';
 import { getHistoryAccess } from '@/lib/history';
 import { yearsNeeded } from '@/lib/history-rules';
 import { dateLabel, drawMoment } from '@/lib/format';
@@ -48,11 +49,12 @@ export default async function ResultPage({ params, searchParams }: { params: Par
       </div>
     );
   }
-  const [{ current }, prizes] = await Promise.all([getCurrentCurrency(), getPrizes(draw.id)]);
+  const [{ current }, prizes, { older, newer }] = await Promise.all([getCurrentCurrency(), getPrizes(draw.id), getNeighbours(draw, access.from)]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <ResultStub draw={draw} prizes={prizes} currency={current} heading="h1" link={false} />
+      <DrawGlance draw={draw} older={older} newer={newer} />
       {unlock ? <UnlockPanel access={access} user={user} path={`/results/${slug}`} flash={unlock} /> : null}
       <JsonLd
         data={{

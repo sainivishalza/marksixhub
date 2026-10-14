@@ -52,7 +52,7 @@ export default async function StatisticsPage() {
             <ol className="grid grid-cols-7 gap-1.5 sm:grid-cols-10">
               {stats.map((s) => (
                 <li key={s.n} className="flex flex-col items-center rounded-lg border border-line/50 p-1">
-                  <NumberBall n={s.n} size="sm" />
+                  <Link href={`/statistics/${s.n}`} aria-label={`Number ${s.n}: details`}><NumberBall n={s.n} size="sm" /></Link>
                   <span className="mt-1 font-mono text-xs tabular-nums" style={{ opacity: 0.45 + (0.55 * s.count) / max }}>{s.count}</span>
                 </li>
               ))}

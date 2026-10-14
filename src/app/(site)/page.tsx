@@ -49,6 +49,7 @@ export default async function HomePage() {
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-mute">
             Choose six numbers from 1 to 49, or let us pick for you. Then see how they would have done in the latest Hong Kong Mark Six draw.
           </p>
+          <p lang="zh-HK" className="mt-3 text-sm text-mute">六合彩 · 香港六合彩號碼選擇器及攪珠結果</p>
 
           <div className="mt-8">
             {!settings.showJackpot ? null : next && next.estJackpotHkd > 0 ? (

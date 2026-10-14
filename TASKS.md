@@ -65,3 +65,9 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Messages: daily-claim result, welcome after sign-up, logged-out notice. Axe fixes (jackpot role, picker group, FAQ/orders heading order). Icons cached one week.
 - [x] Re-audited on the final build: no horizontal overflow on 29 pages at 320/390/768px (jackpot figure shrunk on very small phones), axe clean on public, account and admin pages (the admin "no h1" was the loading skeleton being scanned too early; one admin link now underlined), picker e2e updated for the Add to slip flow.
 - [ ] Open for the owner: review Privacy/Terms text (owner chose no public phone number; CONTACT_PHONE stays empty).
+
+## Genuine SEO content (nextjs, not yet on main)
+- [x] /statistics/[n]: one page per ball 1 to 49 (times drawn, extra count, gap, longest wait, usual partners, latest appearances) from the visitor's visible window only; in sitemap, linked from /statistics and from each result.
+- [x] Each result page has "Draw at a glance" (odd/even, low/high, sum, runs, colours, repeats from the previous draw, links to the draws either side). All worked out from the data, no filler text.
+- [x] 六合彩 in the home and results titles/descriptions and a zh-HK line in the hero.
+- [ ] Owner: add the site in Google Search Console and submit /sitemap.xml; real author/About page needs the owner's name and background.

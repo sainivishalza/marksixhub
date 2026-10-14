@@ -10,7 +10,7 @@ export const SEO_DEFAULTS: Record<string, Seo & { label: string }> = {
   '/': {
     label: 'Home',
     path: '/',
-    title: 'Mark Six Number Picker & Results',
+    title: 'Mark Six Number Picker & Results 六合彩',
     description: 'Free Hong Kong Mark Six number picker with the latest results, jackpot estimates and prize breakdown. Pick 6 numbers from 1 to 49 in seconds.',
   },
   '/picker': {
@@ -22,8 +22,8 @@ export const SEO_DEFAULTS: Record<string, Seo & { label: string }> = {
   '/results': {
     label: 'Results',
     path: '/results',
-    title: 'Mark Six Results: Winning Numbers and Prizes',
-    description: 'Every Hong Kong Mark Six draw with the six winning numbers, the extra number and the prize for each division.',
+    title: 'Mark Six Results 六合彩: Winning Numbers and Prizes',
+    description: 'Every Hong Kong Mark Six (六合彩) draw with the six winning numbers, the extra number and the prize for each division.',
   },
   '/guide': {
     label: 'Guide',

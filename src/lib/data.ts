@@ -63,6 +63,22 @@ export async function getDrawByNo(drawNo: string): Promise<Draw | null> {
   return rows[0] ? toDraw(rows[0]) : null;
 }
 
+/** The published draw just before and just after `draw`. `from` hides draws older than the visitor's access. */
+export async function getNeighbours(draw: Draw, from: string | null): Promise<{ older: Draw | null; newer: Draw | null }> {
+  if (useSample) {
+    const i = sampleDraws.findIndex((d) => d.drawNo === draw.drawNo);
+    return { older: sampleDraws[i + 1] ?? null, newer: i > 0 ? sampleDraws[i - 1] : null };
+  }
+  const [older, newer] = await Promise.all([
+    query<DrawRow>(
+      "SELECT * FROM draws WHERE status='published' AND (draw_date < ? OR (draw_date = ? AND id < ?)) AND (? IS NULL OR draw_date >= ?) ORDER BY draw_date DESC, id DESC LIMIT 1",
+      [draw.drawDate, draw.drawDate, draw.id, from, from],
+    ),
+    query<DrawRow>("SELECT * FROM draws WHERE status='published' AND (draw_date > ? OR (draw_date = ? AND id > ?)) ORDER BY draw_date ASC, id ASC LIMIT 1", [draw.drawDate, draw.drawDate, draw.id]),
+  ]);
+  return { older: older[0] ? toDraw(older[0]) : null, newer: newer[0] ? toDraw(newer[0]) : null };
+}
+
 export async function getPrizes(drawId: number): Promise<Prize[]> {
   if (useSample) return samplePrizes;
   const rows = await query<RowDataPacket & { division: number; winners: number; prize_hkd: number | string }>(
