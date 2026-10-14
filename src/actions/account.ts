@@ -19,6 +19,8 @@ import { addPoints, openDraw } from '@/lib/points';
 import { notifyNewOrder } from '@/lib/order-mail';
 import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
+import { findInviter } from '@/lib/referral';
+import { parseInviteCode } from '@/lib/referral-rules';
 import { readUnsubscribeToken } from '@/lib/reminders';
 import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
 
@@ -99,6 +101,10 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
     ip,
   ]);
   if (!needsConfirm && signupPoints) await exec('INSERT INTO point_log (user_id, delta, reason) VALUES (?,?,?)', [insertId, signupPoints, 'Welcome points']);
+  // An invite link: remember who invited this member. The reward is paid later, when their first order is approved.
+  const invite = parseInviteCode(text(fd, 'ref'));
+  const inviterId = invite ? await findInviter(invite) : null;
+  if (inviterId) await exec('UPDATE users SET referred_by=? WHERE id=?', [inviterId, insertId]);
   if (needsConfirm) void sendVerification(insertId, email);
   await createSession(insertId, hash);
   redirect('/account?welcome=1');

@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <p>We keep as little as we can. If you only browse, we store nothing about you except a currency choice cookie. The site is for people aged 18 and over.</p>
       <h2 className="pt-4 text-2xl text-ivory">If you create an account</h2>
       <p>
-        We store your email, a scrypt hash of your password (never the password), your points balance and history (including points you send or receive, with the other member's nickname or a short code, never their email), your tickets, and the
+        We store your email, a scrypt hash of your password (never the password), your points balance and history (including who invited you, if you joined with an invite link, and points you send or receive, with the other member's nickname or a short code, never their email), your tickets, and the
         IP address used at sign-up and log-in, which we use only to limit abuse. Points are free play credits with no cash value.
       </p>
       <h2 className="pt-4 text-2xl text-ivory">Cookies</h2>

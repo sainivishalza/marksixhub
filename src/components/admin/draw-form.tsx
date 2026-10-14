@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
-import { saveDrawAction, type DrawFormState } from '@/actions/admin';
+import { fetchResultAction, saveDrawAction, type DrawFormState } from '@/actions/admin';
 import { Field, inputClass, Panel, textareaClass } from '@/components/admin/ui';
 import { NumberBoxes } from '@/components/number-boxes';
 import { FormMessage, SubmitButton } from '@/components/submit-button';
 import { buttonVariants } from '@/components/ui/button';
-import { DIVISION_LABEL, DIVISION_RULE, parseResultText } from '@/lib/mark6';
+import { DIVISION_LABEL, DIVISION_RULE, parseResultText, type PastedResult } from '@/lib/mark6';
 import type { Draw, Prize } from '@/lib/types';
 
 const none: DrawFormState = {};
@@ -28,7 +28,7 @@ function StopSelling({ initial }: { initial: string }) {
   );
 }
 
-export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Draw; prizes?: Prize[]; lastPrizes?: Prize[]; suggestedNo?: string }) {
+export function DrawForm({ draw, prizes, lastPrizes, suggestedNo, sourceConfigured = false }: { draw?: Draw; prizes?: Prize[]; lastPrizes?: Prize[]; suggestedNo?: string; sourceConfigured?: boolean }) {
   const [state, action] = useActionState(saveDrawAction, none);
   const raw = state.raw;
   // After a failed save, show what the person typed; otherwise show the saved draw.
@@ -38,9 +38,8 @@ export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Dra
   const [found, setFound] = useState('');
   const val = (name: string, fallback: string | number | null | undefined) => fill[name] ?? raw?.[name] ?? (fallback ?? '').toString();
 
-  // Reads copied results text into the boxes below; nothing is saved until the person checks it and presses Save.
-  function fillFromText() {
-    const r = parseResultText(pasted);
+  // Puts a read result into the boxes below; nothing is saved until the person checks it and presses Save.
+  function applyResult(r: PastedResult, via: string) {
     const next: Record<string, string> = {};
     r.numbers.forEach((n, i) => (next[`n${i + 1}`] = String(n)));
     if (r.extra) next.extra = String(r.extra);
@@ -57,16 +56,29 @@ export function DrawForm({ draw, prizes, lastPrizes, suggestedNo }: { draw?: Dra
     const mismatch = draw && r.drawNo && r.drawNo !== draw.drawNo ? ` Warning: the text is for draw ${r.drawNo}, but this is draw ${draw.drawNo}.` : '';
     const parts = [r.numbers.length ? 'winning numbers' : '', r.extra ? 'extra' : '', r.turnover ? 'turnover' : '', r.prizes.length ? `${r.prizes.length} prize ${r.prizes.length === 1 ? 'row' : 'rows'}` : ''].filter(Boolean);
     const noNumbers = r.numbers.length ? '' : ' The winning numbers were not in the text (a PDF or print shows them as pictures): type them in.';
-    setFound(`Filled: ${parts.join(', ')}. Check every box against the official result, then set the status and save.${noNumbers}${mismatch}`);
+    setFound(`Filled${via}: ${parts.join(', ')}. Check every box against the official result, then set the status and save.${noNumbers}${mismatch}`);
+  }
+  const fillFromText = () => applyResult(parseResultText(pasted), '');
+  const [fetching, setFetching] = useState(false);
+  async function fillFromSource() {
+    setFetching(true);
+    setFound('');
+    const r = await fetchResultAction();
+    setFetching(false);
+    if (r.error || !r.result) return setFound(r.error ?? 'Could not read the result source.');
+    applyResult(r.result, ` from ${r.from}`);
   }
   const [copied, setCopied] = useState(false);
   const prize = (division: number) => (copied ? lastPrizes : prizes)?.find((p) => p.division === division);
 
   return (
     <form action={action} className="max-w-4xl">
-      <Panel title="Fill from copied results text (optional)" className="mb-6">
+      <Panel title="Fill the result (optional)" className="mb-6">
         <p className="mb-2 text-sm text-mute">Copy the result from the official results page and paste it here. The boxes below are filled in for you to check; nothing is saved until you press Save.</p>
         <textarea value={pasted} onChange={(e) => setPasted(e.target.value)} rows={4} aria-label="Copied results text" placeholder="Winning numbers 3 12 25 31 40 49 Extra 7 ... 1st Prize 0.0 $0 ..." className={`${textareaClass} font-mono`} />
+        {sourceConfigured ? (
+          <button type="button" onClick={fillFromSource} disabled={fetching} className="mb-3 mr-2 h-11 rounded-lg border border-gold bg-gold px-4 text-sm font-medium text-night hover:bg-gold-bright disabled:opacity-60 max-sm:w-full">{fetching ? 'Reading...' : 'Fetch the latest result from the result source'}</button>
+        ) : null}
         <button type="button" onClick={fillFromText} disabled={!pasted.trim()} className="mt-2 h-11 rounded-lg border border-gold px-4 text-sm text-gold-bright hover:bg-raised disabled:opacity-50 max-sm:w-full">Fill the form</button>
         {found ? <p role="status" className="mt-2 text-sm text-ivory">{found}</p> : null}
       </Panel>

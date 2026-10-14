@@ -53,3 +53,9 @@ Hostinger installs with NODE_ENV=production, which skips devDependencies, and `n
 
 ## react-is is a direct dependency
 Hostinger retries a failed install with `--legacy-peer-deps`, which does not install peer dependencies. recharts needs `react-is`, so the retry failed the build on top of the original error. It is now listed in `dependencies`. Both `npm install` and `npm install --legacy-peer-deps` were tested in a clean production-style copy.
+
+## Invites are paid on the first approved order
+Paying at sign-up would reward fake accounts. Paying when staff approve the first order ties the reward to real activity checked by a person. Same-network accounts, a per-member cap and a suspended inviter are refused (referral_paid = 2). The claim (0 to 1) is a single UPDATE before any points move, so two orders approved at the same moment cannot pay twice.
+
+## Result source is read-only and fixed
+The address comes from RESULT_SOURCE_URL only, so no visitor or admin input can aim the server at another host (no SSRF). Redirects are refused, size and time are capped, and the data is validated strictly (six different balls 1 to 49, a different extra, whole numbers). The button fills the form; saving and publishing stay manual because publishing pays out points.

@@ -248,6 +248,14 @@ export async function migrate() {
     KEY idx_from (from_user, created_at),
     KEY idx_to (to_user)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await exec(`CREATE TABLE IF NOT EXISTS achievements (
+    user_id INT NOT NULL,
+    code VARCHAR(30) NOT NULL,
+    earned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, code)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  // Friend invites: who invited this member, and whether the invite reward has been paid yet.
+  if (!(await hasColumn('users', 'referred_by'))) await exec('ALTER TABLE users ADD COLUMN referred_by INT NULL, ADD COLUMN referral_paid TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN invite_code CHAR(8) NULL, ADD UNIQUE KEY uq_invite_code (invite_code), ADD KEY idx_referred_by (referred_by)');
   if (!(await hasColumn('users', 'pay_code'))) await exec('ALTER TABLE users ADD COLUMN pay_code CHAR(10) NULL, ADD UNIQUE KEY uq_pay_code (pay_code)');
 
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);

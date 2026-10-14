@@ -63,6 +63,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <p className="mt-3 text-sm"><a href="/admin/transfers" className="text-gold-bright underline underline-offset-4">See recent transfers</a></p>
         </Panel>
 
+        <Panel title="Friend invites">
+          <p className="mb-3 text-sm text-mute">A member shares an invite link. When the new member's first order is approved, both get points. Set both to 0 to switch the rewards off.</p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Points for the member who invited"><input name="invite_reward" type="number" min={0} defaultValue={s.inviteReward} className={inputClass} /></Field>
+            <Field label="Points for the new member"><input name="invite_welcome" type="number" min={0} defaultValue={s.inviteWelcome} className={inputClass} /></Field>
+            <Field label="Most rewarded invites per member" hint="Stops one person collecting rewards without limit."><input name="invite_cap" type="number" min={0} defaultValue={s.inviteCap} className={inputClass} /></Field>
+          </div>
+        </Panel>
+
         <Panel title="Maintenance mode">
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="maintenance" defaultChecked={s.maintenance} className="mt-1" />

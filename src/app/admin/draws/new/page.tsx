@@ -1,3 +1,4 @@
+import { resultSourceUrl } from '@/lib/result-source';
 import { DrawForm } from '@/components/admin/draw-form';
 import { PageHeader } from '@/components/admin/ui';
 import { suggestNextDrawNo } from '@/lib/admin-data';
@@ -10,7 +11,7 @@ export default async function NewDrawPage() {
   return (
     <>
       <PageHeader title="Add draw" description="Announce the next draw first. Add the winning numbers and prizes after it takes place." />
-      <DrawForm suggestedNo={await suggestNextDrawNo()} />
+      <DrawForm suggestedNo={await suggestNextDrawNo()} sourceConfigured={resultSourceUrl() !== null} />
     </>
   );
 }

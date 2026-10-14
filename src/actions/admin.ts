@@ -1,5 +1,9 @@
 'use server';
 
+import { rateLimit } from '@/lib/rate-limit';
+import { rewardReferralsForOrders } from '@/lib/referral';
+import { fetchResult } from '@/lib/result-source';
+import type { PastedResult } from '@/lib/mark6';
 import { redirect } from 'next/navigation';
 import type { RowDataPacket } from 'mysql2/promise';
 import { requireRole } from '@/lib/auth';
@@ -275,6 +279,9 @@ export async function saveSettingsAction(fd: FormData) {
     transferMax: Math.max(1, int(fd, 'transfer_max')),
     transferDaily: Math.max(1, int(fd, 'transfer_daily')),
     transferMinAgeDays: int(fd, 'transfer_min_age_days'),
+    inviteReward: int(fd, 'invite_reward'),
+    inviteWelcome: int(fd, 'invite_welcome'),
+    inviteCap: int(fd, 'invite_cap'),
   });
   await audit(me.id, 'settings.save', 'site and points settings');
   back('/admin/settings', 'ok', 'Settings saved.');
@@ -312,6 +319,7 @@ export async function approveOrderAction(fd: FormData) {
   if (!res.affectedRows) back(ordersPath(drawNo), 'error', 'That order is not waiting for approval.');
   const no = await orderLabel(id);
   notifyOrders('accepted', [id]);
+  await rewardReferralsForOrders([id]);
   await audit(me.id, 'order.approve', `order ${no}, draw ${drawNo}`);
   back(ordersPath(drawNo), 'ok', `Order ${no} approved. The buyer can now download the receipt.`);
 }
@@ -322,6 +330,7 @@ export async function approveAllAction(fd: FormData) {
   const waiting = await query<RowDataPacket & { id: number }>("SELECT id FROM orders WHERE draw_no=? AND status='pending' AND refunded=0", [drawNo]);
   const res = await exec("UPDATE orders SET status='accepted' WHERE draw_no=? AND status='pending' AND refunded=0", [drawNo]);
   notifyOrders('accepted', waiting.map((o) => o.id));
+  await rewardReferralsForOrders(waiting.map((o) => o.id));
   await audit(me.id, 'order.approve_all', `${res.affectedRows} orders, draw ${drawNo}`);
   back(ordersPath(drawNo), 'ok', `${res.affectedRows} orders approved.`);
 }
@@ -474,4 +483,14 @@ export async function setHistoryAction(fd: FormData) {
   await exec('UPDATE users SET history_years=?, history_from=? WHERE id=?', [years, from, id]);
   await audit(me.id, 'user.history', `user ${id}: ${years} years`);
   back(`/admin/users/${id}`, 'ok', years ? `History access set to ${years} year${years === 1 ? '' : 's'}.` : 'History access removed.');
+}
+
+/** Reads the latest result from the configured source into the form. Nothing is saved or published by this. */
+export async function fetchResultAction(): Promise<{ error?: string; result?: PastedResult; from?: string }> {
+  const me = await requireRole('content');
+  const limit = rateLimit(`fetchresult:${me.id}`, 10, 60_000);
+  if (!limit.ok) return { error: 'Too many requests. Wait a minute.' };
+  const r = await fetchResult();
+  await audit(me.id, 'result.fetch', r.ok ? `read from ${r.from}` : r.error.slice(0, 200));
+  return r.ok ? { result: r.result, from: r.from } : { error: r.error };
 }

@@ -7,6 +7,8 @@ import { OrderCard } from '@/components/account/order-card';
 import { Streak } from '@/components/account/streak';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { getOrders } from '@/lib/account-data';
+import { Achievements } from '@/components/account/achievements';
+import { syncAchievements } from '@/lib/achievements';
 import { requireUser } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { openDraw } from '@/lib/points';
@@ -31,10 +33,6 @@ export default async function AccountOverview({ searchParams }: { searchParams: 
   const mine = open
     ? await query<RowDataPacket & { n: number; pending: number | null }>("SELECT COUNT(*) AS n, SUM(status='pending') AS pending FROM orders WHERE user_id=? AND draw_no=? AND refunded=0", [user.id, open.drawNo])
     : [];
-  const [stat] = await query<RowDataPacket & { orders: number; won: number | null }>(
-    'SELECT (SELECT COUNT(*) FROM orders WHERE user_id=? AND refunded=0) AS orders, (SELECT SUM(won_points) FROM saved_sets WHERE user_id=? AND settled=1) AS won',
-    [user.id, user.id],
-  );
   const log = await query<RowDataPacket & { id: number; delta: number; reason: string; created_at: string }>(
     'SELECT id, delta, reason, created_at FROM point_log WHERE user_id=? ORDER BY id DESC LIMIT 5',
     [user.id],
@@ -45,13 +43,7 @@ export default async function AccountOverview({ searchParams }: { searchParams: 
   const kept = done ? Math.min(streak, 7) : Number(me?.cont) ? Math.min(streak, 7) : 0;
   const next = Math.min(kept + 1, 7); // the day you reach by claiming next
   const bonus = settings.dailyPoints + 10 * (next - 1);
-  const badges = [
-    [Number(stat.orders) >= 1, 'First order'],
-    [Number(stat.orders) >= 10, '10 orders'],
-    [streak >= 7, '7-day streak'],
-    [Number(stat.won) > 0, 'First win'],
-    [Number(stat.won) >= 1000, '1,000 points won'],
-  ].filter(([ok]) => ok).map(([, l]) => l as string);
+  const achievements = await syncAchievements(user.id);
 
   return (
     <div className="space-y-8">
@@ -112,11 +104,7 @@ export default async function AccountOverview({ searchParams }: { searchParams: 
         </section>
       </div>
 
-      {badges.length ? (
-        <ul className="flex flex-wrap gap-2" aria-label="Badges">
-          {badges.map((b) => <li key={b} className="rounded-full border border-gold/40 px-3 py-1 text-xs text-gold-bright">{b}</li>)}
-        </ul>
-      ) : null}
+      <Achievements items={achievements} />
 
       <section aria-labelledby="recent-orders">
         <div className="mb-3 flex items-baseline justify-between gap-3">

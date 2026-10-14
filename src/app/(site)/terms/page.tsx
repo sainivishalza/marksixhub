@@ -21,6 +21,11 @@ export default function TermsPage() {
         You may send free play points to another member, within the limits shown on the send page. Sending needs your password, cannot be undone by you, and is for fun between people who know each other. You must never
         ask for or accept money, goods or any other reward for points. We may cancel transfers, remove points and close accounts that break this rule, farm sign-up points through extra accounts, or look like abuse, and we may pause sending at any time.
       </p>
+      <h2 className="pt-4 text-2xl text-ivory">Inviting friends</h2>
+      <p>
+        You may invite people you know with your personal invite link. Both of you receive free play points once the new member&apos;s first order is approved, up to the limit shown on the invite page. Rewards are not paid for accounts that share your
+        network, for accounts that look made up to collect rewards, or beyond the limit, and we may remove points and close accounts that abuse invites. Never offer or accept money, goods or any other reward for an invite.
+      </p>
       <h2 className="pt-4 text-2xl text-ivory">No payments, no refunds</h2>
       <p>Nothing on this site costs money, so there is nothing to refund. If a ticket is rejected or a result is corrected, the points are returned to your balance.</p>
       <h2 className="pt-4 text-2xl text-ivory">Adults only</h2>

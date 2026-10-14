@@ -21,6 +21,10 @@ export type Settings = {
   transferMax: number;
   transferDaily: number;
   transferMinAgeDays: number;
+  /** Friend invites: points for the inviter and for the new member once the new member's first order is approved, and the most rewarded invites per member. */
+  inviteReward: number;
+  inviteWelcome: number;
+  inviteCap: number;
 };
 
 const nat = (v: string | undefined, d: number) => (v !== undefined && /^\d{1,9}$/.test(v) ? Number(v) : d);
@@ -44,6 +48,9 @@ const DEFAULTS: Settings = {
   transferMax: 1000,
   transferDaily: 3000,
   transferMinAgeDays: 3,
+  inviteReward: 200,
+  inviteWelcome: 200,
+  inviteCap: 10,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -67,6 +74,9 @@ export async function getSettings(): Promise<Settings> {
         transferMax: nat(m.transfer_max, 1000),
         transferDaily: nat(m.transfer_daily, 3000),
         transferMinAgeDays: nat(m.transfer_min_age_days, 3),
+        inviteReward: nat(m.invite_reward, 200),
+        inviteWelcome: nat(m.invite_welcome, 200),
+        inviteCap: nat(m.invite_cap, 10),
         prizePoints: DEFAULT_PRIZES.map((d, i) => nat(m.prize_points?.split(',')[i]?.trim(), d)),
       };
     } catch (err) {
@@ -93,6 +103,9 @@ export async function saveSettings(s: Settings) {
     ['transfer_max', String(s.transferMax)],
     ['transfer_daily', String(s.transferDaily)],
     ['transfer_min_age_days', String(s.transferMinAgeDays)],
+    ['invite_reward', String(s.inviteReward)],
+    ['invite_welcome', String(s.inviteWelcome)],
+    ['invite_cap', String(s.inviteCap)],
   ];
   for (const [k, v] of rows) await exec('REPLACE INTO settings (k, v) VALUES (?,?)', [k, v]);
   cache = null;

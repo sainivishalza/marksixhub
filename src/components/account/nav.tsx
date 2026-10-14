@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeftRight, Coins, LayoutDashboard, Settings, Ticket } from 'lucide-react';
+import { ArrowLeftRight, Coins, Gift, LayoutDashboard, Settings, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -10,6 +10,7 @@ const TABS = [
   { href: '/account/orders', label: 'Orders', icon: Ticket },
   { href: '/account/points', label: 'Points', icon: Coins },
   { href: '/account/transfer', label: 'Send & receive', icon: ArrowLeftRight },
+  { href: '/account/invite', label: 'Invite', icon: Gift },
   { href: '/account/settings', label: 'Settings', icon: Settings },
 ];
 

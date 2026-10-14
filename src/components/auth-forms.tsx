@@ -31,10 +31,11 @@ export function LoginForm({ next }: { next: string }) {
   );
 }
 
-export function RegisterForm() {
+export function RegisterForm({ invite = '' }: { invite?: string }) {
   const [state, action] = useActionState(registerAction, none);
   return (
     <form key={state.email ?? ''} action={action} className="space-y-4">
+      <input type="hidden" name="ref" value={invite} />
       <label className="block text-sm text-mute">
         Email
         <input className={input} type="email" name="email" required autoComplete="email" maxLength={190} defaultValue={state.email} />

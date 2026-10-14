@@ -1,3 +1,4 @@
+import { resultSourceUrl } from '@/lib/result-source';
 import { NumberBoxes } from '@/components/number-boxes';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -67,7 +68,7 @@ export default async function EditDrawPage({ params, searchParams }: { params: P
         </form>
       ) : null}
       {/* A valid preview fills the result boxes below, so the numbers are typed once. */}
-      <DrawForm draw={preview && !published ? { ...found.draw, numbers: previewNums, extra: previewExtra } : found.draw} prizes={found.prizes} lastPrizes={published ? undefined : await getLastPrizes()} />
+      <DrawForm sourceConfigured={resultSourceUrl() !== null} draw={preview && !published ? { ...found.draw, numbers: previewNums, extra: previewExtra } : found.draw} prizes={found.prizes} lastPrizes={published ? undefined : await getLastPrizes()} />
     </>
   );
 }
