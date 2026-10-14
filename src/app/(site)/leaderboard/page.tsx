@@ -3,7 +3,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { query } from '@/lib/db';
 import { pageMetadata } from '@/lib/seo';
 
-export const metadata = pageMetadata({ title: 'Leaderboard', description: 'Top free play point balances on Mark Six Hub.', path: '/leaderboard', noindex: true });
+export const metadata = pageMetadata({ title: 'Leaderboard', description: 'The top free play point balances on Mark Six Hub. Points are free credits with no cash value; add a nickname to join.', path: '/leaderboard', noindex: true });
 export const dynamic = 'force-dynamic';
 
 export default async function LeaderboardPage() {

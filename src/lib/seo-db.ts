@@ -34,7 +34,7 @@ export const SEO_DEFAULTS: Record<string, Seo & { label: string }> = {
   '/statistics': {
     label: 'Statistics',
     path: '/statistics',
-    title: 'Mark Six Number Statistics: Hot, Cold and Overdue Numbers',
+    title: 'Mark Six Statistics: Hot, Cold and Overdue Numbers',
     description: 'How often each Mark Six number from 1 to 49 has been drawn, the most and least drawn numbers and how long since each last appeared.',
   },
   '/check': {
