@@ -44,6 +44,10 @@ export async function runHealth(): Promise<Check[]> {
   const noTwo = await n("SELECT COUNT(*) AS n FROM users WHERE role <> 'user' AND blocked = 0 AND totp_on = 0");
   add('twostep', 'Staff two-step login', noTwo ? 'warn' : 'ok', noTwo ? `${plural(noTwo, 'staff account')} ${noTwo === 1 ? 'has' : 'have'} no two-step login. Turn it on in Account > Settings.` : 'On for every staff account.');
 
+  const [bk] = await query<RowDataPacket & { days: number | null }>("SELECT DATEDIFF(UTC_DATE(), MAX(created_at)) AS days FROM audit_log WHERE action='export.all'");
+  const days = bk?.days === null || bk?.days === undefined ? null : Number(bk.days);
+  add('backup', 'Data backup', days !== null && days <= 7 ? 'ok' : 'warn', days === null ? 'No backup downloaded yet. Use Settings > Download full backup now and again each week, and keep your hosting backups on.' : days <= 7 ? `Last downloaded ${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}.` : `Last downloaded ${days} days ago. Download a fresh one (Settings > Download full backup).`);
+
   add('envpass', 'Admin password setting', process.env.ADMIN_PASSWORD ? 'warn' : 'ok', process.env.ADMIN_PASSWORD ? 'ADMIN_PASSWORD is still set in the hosting environment. Remove it now that the admin account exists.' : 'Not set in the environment.');
   add('https', 'Secure address', BASE_URL.startsWith('https://') ? 'ok' : 'warn', BASE_URL.startsWith('https://') ? BASE_URL : `BASE_URL is ${BASE_URL}, not https.`);
   return out;

@@ -91,3 +91,10 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] Admin > Health check (manage level): database, email settings, open draw, results not entered, orders pending for closed draws, orders waiting over 24h, points balances vs history, staff without two-step login, ADMIN_PASSWORD still set, https.
 - [x] Daily email at 8am Hong Kong time or later (checked every 30 min and 1 min after start) to HEALTH_ALERT_EMAIL, else ORDER_ALERT_EMAIL, else ADMIN_EMAIL; only when something needs a look; one per day, claimed in the settings table so two processes never double-send.
 - [ ] Owner: set OPERATOR_NAME/OPERATOR_ADDRESS (and HEALTH_ALERT_EMAIL) on Hostinger; check the "where results come from" wording matches how you really enter results.
+
+## Pending items done (nextjs)
+- [x] Results search: find a draw by number (1 to 49, main or extra) or by draw number (26/104 or 104); only inside the visitor's visible window, so locked history cannot be searched; searched/sorted pages are noindex; parameterised SQL.
+- [x] Health check also warns when no data backup (Settings > Download full backup) was downloaded in the last 7 days (read from the audit log).
+- [x] "How it works" 3-step strip on the picker.
+- [x] Win emails already existed (notifyWins).
+- [ ] Not built, on purpose: draw reminder emails (need an opt-in setting first, privacy page promises mail only about things the user asked for); auto-publish and auto-approve (a wrong automatic payout is hard to undo); fetching results from an outside site (no source agreed); Chinese translation of the pages (large; needs a reviewed translation).

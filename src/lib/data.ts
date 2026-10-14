@@ -46,10 +46,39 @@ export async function getNextDraw(): Promise<Draw | null> {
 }
 
 /** Published draws, newest first. `from` (YYYY-MM-DD) hides anything older: this is where the paid history is enforced. */
-export async function getDraws(limit: number, offset = 0, from: string | null = null): Promise<{ draws: Draw[]; total: number }> {
-  if (useSample) return { draws: sampleDraws.slice(offset, offset + limit), total: sampleDraws.length };
-  const where = from ? "status='published' AND draw_date >= ?" : "status='published'";
-  const args = from ? [from] : [];
+export type DrawFilter = { number?: number; drawNo?: string; none?: boolean };
+
+/** What a visitor typed into the results search: 1 to 49 means "drawn with that number", anything else is part of a draw number such as 26/104 or 104. */
+export function parseDrawQuery(q: string): DrawFilter | null {
+  const t = q.trim().slice(0, 12);
+  if (!t) return null;
+  if (/^\d{1,2}$/.test(t) && Number(t) >= 1 && Number(t) <= 49) return { number: Number(t) };
+  const d = t.replace(/[^0-9/]/g, '');
+  return d ? { drawNo: d } : { none: true }; // text with no digits matches nothing, rather than everything
+}
+
+/** Published draws, newest first. `from` (YYYY-MM-DD) hides anything older: this is where the paid history is enforced. */
+export async function getDraws(limit: number, offset = 0, from: string | null = null, filter: DrawFilter | null = null): Promise<{ draws: Draw[]; total: number }> {
+  if (filter?.none) return { draws: [], total: 0 };
+  if (useSample) {
+    const rows = sampleDraws.filter((d) => (!filter?.number || d.numbers.includes(filter.number) || d.extra === filter.number) && (!filter?.drawNo || d.drawNo.includes(filter.drawNo)));
+    return { draws: rows.slice(offset, offset + limit), total: rows.length };
+  }
+  const conds = ["status='published'"];
+  const args: unknown[] = [];
+  if (from) {
+    conds.push('draw_date >= ?');
+    args.push(from);
+  }
+  if (filter?.number) {
+    conds.push('(FIND_IN_SET(?, nums) OR extra = ?)');
+    args.push(filter.number, filter.number);
+  }
+  if (filter?.drawNo) {
+    conds.push('draw_no LIKE ?');
+    args.push(`%${filter.drawNo.replace(/[%_\\]/g, '')}%`);
+  }
+  const where = conds.join(' AND ');
   const [rows, count] = await Promise.all([
     query<DrawRow>(`SELECT * FROM draws WHERE ${where} ORDER BY draw_date DESC, id DESC LIMIT ? OFFSET ?`, [...args, limit, offset]),
     query<RowDataPacket & { n: number }>(`SELECT COUNT(*) AS n FROM draws WHERE ${where}`, args),
