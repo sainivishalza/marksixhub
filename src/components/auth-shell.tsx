@@ -14,6 +14,7 @@ export function AuthShell({ title, intro, children, welcome }: { title: string; 
         <h1 className="text-4xl sm:text-5xl">{title}</h1>
         <p className="mt-3 max-w-[48ch] text-lg text-mute">{intro}</p>
         {welcome ? <p className="mt-5 inline-block rounded-full border border-gold/50 bg-gold/10 px-4 py-1.5 text-sm text-gold-bright">{welcome.toLocaleString('en-US')} free welcome points when you confirm your email</p> : null}
+        <p className="mt-3 text-sm text-mute">Free play only. No deposits, no cash-out, adults 18+.</p>
       </div>
       <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">{children}</div>
       <ul className="space-y-5 lg:col-start-1 lg:row-start-2">

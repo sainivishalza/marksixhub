@@ -15,7 +15,11 @@ export async function register() {
   const g = globalThis as { __healthTimer?: ReturnType<typeof setInterval> };
   if (!g.__healthTimer) {
     const { sendDailyDigest } = await import('./lib/health');
-    const run = () => void sendDailyDigest().catch((err) => console.error('daily health email failed:', err));
+    const { sendReminders } = await import('./lib/reminders');
+    const run = () => {
+      void sendDailyDigest().catch((err) => console.error('daily health email failed:', err));
+      void sendReminders().catch((err) => console.error('draw reminders failed:', err));
+    };
     g.__healthTimer = setInterval(run, Number(process.env.HEALTH_INTERVAL_MS) || 30 * 60_000);
     g.__healthTimer.unref();
     setTimeout(run, 60_000).unref(); // also soon after a restart, so a deploy never skips the morning email

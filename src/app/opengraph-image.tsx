@@ -15,6 +15,7 @@ export default function OgImage() {
         <div style={{ fontSize: 30, color: '#D4AF37' }}>Mark Six Hub</div>
         <div style={{ fontSize: 96, fontWeight: 700, marginTop: 16, color: '#F5C542' }}>Pick your lucky 6</div>
         <div style={{ fontSize: 34, marginTop: 12, color: '#A9B0C0' }}>Free number picker and the latest Mark Six results</div>
+        <div style={{ fontSize: 26, marginTop: 10, color: '#D4AF37' }}>Free play · No deposits · 18+</div>
         <div style={{ display: 'flex', gap: 18, marginTop: 56 }}>
           {demo.map((n) => (
             <div key={n} style={{ width: 96, height: 96, borderRadius: 48, background: TONE[ballTone(n)], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44, fontWeight: 700, color: '#fff', border: '3px solid rgba(255,255,255,0.35)' }}>

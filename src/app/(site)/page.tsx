@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Dices, ListChecks, Trophy, ShieldCheck, Gift, FileCheck2 } from 'lucide-react';
+import { BarChart3, Crown, Dices, FileCheck2, Gift, ListChecks, Search, ShieldCheck, Ticket, Trophy } from 'lucide-react';
 import { FaqList } from '@/components/faq-list';
 import { HeroActions } from '@/components/hero-actions';
 import { Jackpot } from '@/components/jackpot';
@@ -15,15 +15,22 @@ import { seoMetadata } from '@/lib/seo-db';
 import { getSettings } from '@/lib/settings';
 
 const STEPS = [
-  { icon: Dices, title: 'Choose six numbers', text: 'Tap six numbers on the board, or press Quick pick and we choose for you.' },
-  { icon: ListChecks, title: 'Check the latest draw', text: 'Your ticket is compared with the latest result, with the prize it would have won.' },
-  { icon: Trophy, title: 'Play only through the HKJC', text: 'We never take bets. If you are eligible to play, use the official Hong Kong Jockey Club channels.' },
+  { icon: Dices, title: 'Choose six numbers', text: 'Tap six numbers on the board, or press Quick pick and we choose for you. Add as many tickets as you like.' },
+  { icon: Ticket, title: 'Submit with free points', text: 'Log in and submit. Each ticket costs free points, and our team approves it. You get a receipt you can download.' },
+  { icon: Trophy, title: 'Follow the result', text: 'When the draw is published, every approved ticket is checked automatically and wins are added to your points.' },
 ];
 
 const FACTS = [
+  { icon: Gift, text: 'Free play only: no money, no deposits, no cash-out' },
   { icon: FileCheck2, text: 'Standard Mark Six format: 6 from 49, plus an extra number' },
-  { icon: Gift, text: 'Free to use. No sign-up needed to pick numbers' },
-  { icon: ShieldCheck, text: 'Independent site. We never take bets or hold money' },
+  { icon: ShieldCheck, text: 'Independent site for adults (18+). Not affiliated with the lottery operator' },
+];
+
+const TOOLS = [
+  { href: '/check', icon: ListChecks, title: 'Check my numbers', text: 'Did your lucky six ever win? Type them in and see.' },
+  { href: '/results', icon: Search, title: 'Search results', text: 'Find any draw by its number, or every draw with your favourite number.' },
+  { href: '/statistics', icon: BarChart3, title: 'Number statistics', text: 'How often each number has come up, and how long since it last did.' },
+  { href: '/leaderboard', icon: Crown, title: 'Leaderboard', text: 'The top free play point balances. Add a nickname to join.' },
 ];
 
 export const generateMetadata = () => seoMetadata('/');
@@ -47,8 +54,13 @@ export default async function HomePage() {
         <div className="min-w-0 lg:pt-6">
           <h1 className="gold-text font-serif text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl">Pick your lucky 6</h1>
           <p className="mt-5 max-w-[46ch] text-lg leading-relaxed text-mute">
-            Choose six numbers from 1 to 49, or let us pick for you. Then see how they would have done in the latest Hong Kong Mark Six draw.
+            Choose six numbers from 1 to 49, or let us pick for you. Play for free points and follow the next Hong Kong Mark Six draw.
           </p>
+          <ul aria-label="Good to know" className="mt-4 flex flex-wrap gap-2 text-xs">
+            {['Free play', 'No deposits', 'No cash-out', '18+ only'].map((t) => (
+              <li key={t} className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-gold-bright">{t}</li>
+            ))}
+          </ul>
           <p lang="zh-HK" className="mt-3 text-sm text-mute">六合彩 · 香港六合彩號碼選擇器及攪珠結果</p>
 
           <div className="mt-8">
@@ -66,6 +78,11 @@ export default async function HomePage() {
 
           <div className="mt-8">
             <HeroActions />
+            {user ? null : (
+              <p className="mt-4 text-sm text-mute">
+                New here? <Link href="/register" className="text-gold-bright underline underline-offset-4">Create a free account</Link> and start with {settings.signupPoints.toLocaleString('en')} points.
+              </p>
+            )}
           </div>
 
           <ul className="mt-10 grid gap-3 text-sm text-mute">
@@ -87,6 +104,22 @@ export default async function HomePage() {
             wallet={user ? await walletFor(user.id, settings.ticketPoints) : null}
           />
         </div>
+      </section>
+
+      <section aria-label="Tools" className="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {TOOLS.map(({ href, icon: Icon, title, text }) => (
+            <li key={href}>
+              <Link href={href} className="surface flex h-full gap-3 p-4 transition-colors hover:border-gold">
+                <Icon aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+                <span>
+                  <strong className="block font-serif text-lg font-semibold text-ivory">{title}</strong>
+                  <span className="mt-1 block text-sm text-mute">{text}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:px-8">

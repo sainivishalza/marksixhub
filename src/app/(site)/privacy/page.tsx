@@ -28,7 +28,7 @@ export default function PrivacyPage() {
       <h2 className="pt-4 text-2xl text-ivory">How long we keep it</h2>
       <p>Account details stay until you delete your account. Login attempt records are removed after 30 days.</p>
       <h2 className="pt-4 text-2xl text-ivory">Email</h2>
-      <p>We email you only for things you ask for: verification, password reset and updates on your tickets.</p>
+      <p>We email you only for things you ask for: verification, password reset, updates on your tickets and, only if you turn it on under Account → Settings, one reminder before each draw closes. Every reminder has a link to stop it.</p>
       <h2 className="pt-4 text-2xl text-ivory">Your choices</h2>
       <p>You can delete your account yourself under Account → Settings → Delete my account. This removes your email, password, nickname and favourites. Past orders stay, with no name attached, so draw totals still add up.</p>
       <p>

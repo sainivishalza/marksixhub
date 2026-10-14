@@ -35,6 +35,7 @@ export default async function ResultOg({ params }: { params: Promise<{ slug: str
             {draw.extra ? ball(draw.extra, true) : null}
           </div>
         ) : null}
+        <div style={{ position: 'absolute', left: 80, bottom: 48, fontSize: 28, color: '#A9B0C0' }}>marksixhub.com · Free play · 18+</div>
       </div>
     ),
     size,

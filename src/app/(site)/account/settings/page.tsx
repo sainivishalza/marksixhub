@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { RowDataPacket } from 'mysql2/promise';
 import { BadgeCheck } from 'lucide-react';
-import { beginTotpAction, confirmTotpAction, disableTotpAction, saveNicknameAction } from '@/actions/account';
+import { beginTotpAction, confirmTotpAction, disableTotpAction, saveNicknameAction, saveRemindersAction } from '@/actions/account';
 import { ChangePasswordForm, DeleteAccountForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
 import { requireUser } from '@/lib/auth';
@@ -13,10 +13,10 @@ export const metadata: Metadata = { title: 'Account settings', robots: { index: 
 const field = 'h-11 w-full rounded-xl border border-line bg-night px-4 text-sm text-ivory placeholder:text-mute/60';
 const card = 'surface p-5 sm:p-6';
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ nick?: string; two?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ nick?: string; two?: string; remind?: string }> }) {
   const user = await requireUser('/account/settings');
-  const { nick, two } = await searchParams;
-  const [me] = await query<RowDataPacket & { nickname: string | null; totp_on: number; totp_secret: string | null }>('SELECT nickname, totp_on, totp_secret FROM users WHERE id=?', [user.id]);
+  const { nick, two, remind } = await searchParams;
+  const [me] = await query<RowDataPacket & { nickname: string | null; totp_on: number; totp_secret: string | null; remind: number }>('SELECT nickname, totp_on, totp_secret, remind FROM users WHERE id=?', [user.id]);
 
   return (
     <div className="space-y-6">
@@ -43,6 +43,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <Button type="submit" variant="outline">Save</Button>
         </form>
         {nick ? <p role="status" className="mt-3 text-sm text-mute">{nick}</p> : null}
+      </section>
+
+      <section id="reminders" className={card} aria-labelledby="reminders-h">
+        <h2 id="reminders-h" className="font-serif text-xl">Draw reminders</h2>
+        <p className="mt-2 max-w-[60ch] text-sm text-mute">One email a day before orders close for a draw, so you do not miss it. Off unless you turn it on, and every email has a link to stop it.</p>
+        <form action={saveRemindersAction} className="mt-4 flex items-center gap-4">
+          <label className="flex items-center gap-3 text-sm text-ivory">
+            <input type="checkbox" name="remind" value="1" defaultChecked={Boolean(Number(me?.remind))} className="h-5 w-5 accent-gold" />
+            Email me before each draw closes
+          </label>
+          <Button type="submit" variant="outline">Save reminders</Button>
+        </form>
+        {remind ? <p role="status" className="mt-3 text-sm text-mute">{remind === 'on' ? 'Reminders are on.' : 'Reminders are off.'}</p> : null}
       </section>
 
       <section id="two-step" className={card} aria-labelledby="two-step-h">

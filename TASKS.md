@@ -98,3 +98,10 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] "How it works" 3-step strip on the picker.
 - [x] Win emails already existed (notifyWins).
 - [ ] Not built, on purpose: draw reminder emails (need an opt-in setting first, privacy page promises mail only about things the user asked for); auto-publish and auto-approve (a wrong automatic payout is hard to undo); fetching results from an outside site (no source agreed); Chinese translation of the pages (large; needs a reviewed translation).
+
+## Owner-view polish (nextjs)
+- [x] Home: trust chips (Free play, No deposits, No cash-out, 18+), guest sign-up line with the welcome points, "How it works" and facts rewritten to match the real points flow (they still said "never take bets, use the HKJC"), tools strip (Check my numbers, Search results, Statistics, Leaderboard).
+- [x] New logo (three balls in a gold ring, flat fills) in the header, favicon, apple icon and PWA icons; share images carry "Free play · 18+" and the domain.
+- [x] Trust lines: sign-up page ("Free play only..."), result pages ("Entered by our team from the official result... Tell us").
+- [x] Opt-in draw reminder emails: users.remind / remind_sent, toggle in Account > Settings (off by default), one email per draw when it closes within 24h, only confirmed and unblocked users, signed unsubscribe link (confirm button, no login) and List-Unsubscribe header, privacy text updated.
+- [ ] Not built: product video / animation, weekly statistics email, Chinese version (needs a reviewed translation), real photo or name on About (needs OPERATOR_NAME). Bot screen on the live site is a Hostinger setting (hPanel), not code.

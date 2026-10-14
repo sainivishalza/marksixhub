@@ -234,6 +234,8 @@ export async function migrate() {
 
   if (!(await hasColumn('users', 'history_years'))) await exec('ALTER TABLE users ADD COLUMN history_years TINYINT NOT NULL DEFAULT 0, ADD COLUMN history_from DATE NULL');
 
+  if (!(await hasColumn('users', 'remind'))) await exec("ALTER TABLE users ADD COLUMN remind TINYINT(1) NOT NULL DEFAULT 0, ADD COLUMN remind_sent VARCHAR(8) NULL");
+
   for (const c of CURRENCIES) await exec('INSERT IGNORE INTO currencies (code, name, symbol, rate) VALUES (?,?,?,?)', c);
   for (const [k, v] of Object.entries(SETTING_DEFAULTS)) await exec('INSERT IGNORE INTO settings (k, v) VALUES (?,?)', [k, v]);
 

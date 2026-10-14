@@ -19,6 +19,7 @@ import { addPoints, openDraw } from '@/lib/points';
 import { notifyNewOrder } from '@/lib/order-mail';
 import { getSettings } from '@/lib/settings';
 import { rateLimit } from '@/lib/rate-limit';
+import { readUnsubscribeToken } from '@/lib/reminders';
 import { EMAIL, passwordProblem, safeNext } from '@/lib/validate';
 
 /** `email` is echoed back after a failed attempt so the form can keep what was typed. */
@@ -205,6 +206,19 @@ export async function saveNicknameAction(fd: FormData) {
     throw err;
   }
   redirect(`/account/settings?nick=${encodeURIComponent(nick ? 'Saved. You are on the leaderboard.' : 'Removed. You are off the leaderboard.')}`);
+}
+
+export async function saveRemindersAction(fd: FormData) {
+  const user = await requireUser();
+  const on = text(fd, 'remind') === '1' ? 1 : 0;
+  await exec('UPDATE users SET remind=?, remind_sent=NULL WHERE id=?', [on, user.id]);
+  redirect(`/account/settings?remind=${on ? 'on' : 'off'}#reminders`);
+}
+
+export async function unsubscribeAction(fd: FormData) {
+  const id = readUnsubscribeToken(text(fd, 't').slice(0, 60));
+  if (id) await exec('UPDATE users SET remind=0 WHERE id=?', [id]);
+  redirect(`/unsubscribe?done=${id ? 1 : 0}`);
 }
 
 export async function deleteSetAction(fd: FormData) {

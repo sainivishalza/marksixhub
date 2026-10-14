@@ -38,3 +38,9 @@ Google Analytics sets cookies, so it loads only after the visitor accepts (local
 
 ## Daily health email uses an in-process timer
 Hostinger Node hosting has no cron, so instrumentation.ts runs a 30-minute timer (unref'd, one per process). The day is claimed with an UPDATE on settings.health_digest before sending, so restarts or two processes cannot send twice. Quiet days send nothing. HEALTH_INTERVAL_MS exists only so tests can shorten the timer.
+
+## Draw reminders are opt-in and claimed per user
+Reminders are marketing-adjacent, so they are off by default and only for confirmed users who turn them on. remind_sent holds the last draw reminded; the row is claimed with an UPDATE before sending so two processes never double-send, and released if the mail fails. The unsubscribe link is an HMAC of the user id (SESSION_SECRET) and needs a button press, so mail scanners that open links cannot unsubscribe people.
+
+## Logo uses flat fills
+The header renders the logo twice (phone and desktop). Gradient ids would collide and the copy inside a display:none block breaks the gradient on the visible one, so the SVG uses solid colours.

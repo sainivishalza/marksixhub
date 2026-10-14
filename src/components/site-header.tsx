@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { logoutAction } from '@/actions/account';
 import { CurrencySwitch } from '@/components/currency-switch';
+import { LogoMark } from '@/components/logo-mark';
 import { MobileMenu } from '@/components/mobile-menu';
 import { getCurrentCurrency } from '@/lib/data';
 import { can } from '@/lib/perms';
@@ -20,7 +21,7 @@ export async function SiteHeader({ siteName, user }: { siteName: string; user: U
   const canAdmin = Boolean(user && can(user.role, 'view'));
   const logo = (
     <Link href="/" className="flex min-w-0 items-center gap-2.5 font-serif text-xl font-semibold">
-      <span aria-hidden className="ball ball-red h-7 w-7 shrink-0 text-xs">6</span>
+      <LogoMark className="h-8 w-8 shrink-0" />
       <span className="truncate">{siteName}</span>
     </Link>
   );

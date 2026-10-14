@@ -32,6 +32,9 @@ export function DrawGlance({ draw, older, newer }: { draw: Draw; older: Draw | n
           )}
         </div>
       ) : null}
+      <p className="mt-3 text-xs text-mute">
+        Entered by our team from the official published result and checked before it went live. Spotted a mistake? <Link href="/contact" className="text-gold-bright underline underline-offset-4">Tell us</Link>.
+      </p>
       <p className="mt-3 text-xs text-mute">Every draw is independent. These are descriptions of what happened, not predictions.</p>
       <nav aria-label="Neighbouring draws" className="mt-4 flex flex-wrap gap-2">
         {older ? <Link href={`/results/${drawSlug(older.drawNo)}`} className={link}>&larr; Draw {older.drawNo}</Link> : null}
