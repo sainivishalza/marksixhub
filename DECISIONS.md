@@ -29,3 +29,9 @@
 
 ## Number pages and draw facts (SEO)
 Per-number pages and the result-page facts are computed from draw data only (`numberDetail`, `drawFacts` in `src/lib/stats.ts`), so every page is unique and nothing is invented. Pages show the visitor's own history window; search engines see the free window, so the paid older results never leak into indexed text. Wording always says results do not predict future draws.
+
+## Account deletion keeps orders anonymously
+Deleting an account renames the email to deleted-<id>@deleted.invalid and clears every personal field instead of deleting the row, because orders and point_log cascade from users and the draw totals and payout history must stay correct. The account is blocked and its password hash is unusable.
+
+## Analytics needs consent
+Google Analytics sets cookies, so it loads only after the visitor accepts (localStorage `mh-analytics`). Essential cookies (login, currency) need no banner. Plausible is cookieless and is not gated.

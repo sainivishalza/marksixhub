@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState } from 'react';
-import { changePasswordAction, forgotPasswordAction, loginAction, resetPasswordAction, registerAction, type FormState } from '@/actions/account';
+import { changePasswordAction, deleteAccountAction, forgotPasswordAction, loginAction, resetPasswordAction, registerAction, type FormState } from '@/actions/account';
 import { FormMessage, SubmitButton } from '@/components/submit-button';
 
 const input = 'mt-1 h-11 w-full rounded-xl border border-line bg-night px-4 text-ivory placeholder:text-mute/60';
@@ -41,6 +42,13 @@ export function RegisterForm() {
       <label className="block text-sm text-mute">
         Password (at least 10 characters)
         <input className={input} type="password" name="password" required minLength={10} maxLength={200} autoComplete="new-password" />
+      </label>
+      <label className="flex items-start gap-3 text-sm text-mute">
+        <input type="checkbox" name="agree" required className="mt-1 h-5 w-5 shrink-0 accent-gold" />
+        <span>
+          I am 18 or older and I accept the <Link href="/terms" className="text-gold-bright underline underline-offset-4">Terms</Link> and the{' '}
+          <Link href="/privacy" className="text-gold-bright underline underline-offset-4">Privacy policy</Link>.
+        </span>
       </label>
       <p className="text-xs text-mute">We will email you a link to confirm your address.</p>
       <FormMessage error={state.error} />
@@ -92,6 +100,21 @@ export function ResetForm({ token }: { token: string }) {
       </label>
       <FormMessage error={state.error} />
       <SubmitButton size="lg" pendingText="Saving..." className="w-full">Set new password</SubmitButton>
+    </form>
+  );
+}
+
+export function DeleteAccountForm() {
+  const [state, action] = useActionState(deleteAccountAction, none);
+  return (
+    <form action={action} className="max-w-sm space-y-3">
+      <p className="text-sm text-mute">
+        This removes your email, password, nickname and favourites for good, and you are logged out. Your points are lost. Past orders stay, with no name attached, so draw totals still add up.
+      </p>
+      <input className={input} type="password" name="password" required autoComplete="current-password" placeholder="Your password" aria-label="Your password" maxLength={200} />
+      <input className={input} name="confirm" required autoComplete="off" placeholder="Type DELETE to confirm" aria-label="Type DELETE to confirm" maxLength={10} />
+      <FormMessage error={state.error} />
+      <SubmitButton variant="outline" pendingText="Deleting..." className="border-miss/60 text-miss">Delete my account</SubmitButton>
     </form>
   );
 }

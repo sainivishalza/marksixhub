@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { RowDataPacket } from 'mysql2/promise';
 import { BadgeCheck } from 'lucide-react';
 import { beginTotpAction, confirmTotpAction, disableTotpAction, saveNicknameAction } from '@/actions/account';
-import { ChangePasswordForm } from '@/components/auth-forms';
+import { ChangePasswordForm, DeleteAccountForm } from '@/components/auth-forms';
 import { Button } from '@/components/ui/button';
 import { requireUser } from '@/lib/auth';
 import { query } from '@/lib/db';
@@ -76,6 +76,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <h2 id="password" className="mb-4 font-serif text-xl">Change password</h2>
         <ChangePasswordForm />
       </section>
+
+      {user.role === 'user' ? (
+        <section className={card} aria-labelledby="delete">
+          <h2 id="delete" className="mb-4 font-serif text-xl">Delete my account</h2>
+          <DeleteAccountForm />
+        </section>
+      ) : null}
     </div>
   );
 }

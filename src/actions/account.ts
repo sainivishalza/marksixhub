@@ -76,6 +76,7 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
   if (!EMAIL.test(email)) return { error: 'Enter a valid email address.', email };
   const problem = passwordProblem(password);
   if (problem) return { error: problem, email };
+  if (!text(fd, 'agree')) return { error: 'Please confirm you are 18 or older and accept the Terms and Privacy policy.', email };
   if ((await query('SELECT id FROM users WHERE email=?', [email])).length) return { error: 'That email is already registered. Try logging in.', email };
 
   const currency = (await cookies()).get('cur')?.value;
@@ -100,6 +101,32 @@ export async function registerAction(_prev: FormState, fd: FormData): Promise<Fo
   if (needsConfirm) void sendVerification(insertId, email);
   await createSession(insertId, hash);
   redirect('/account?welcome=1');
+}
+
+/** Removes everything that identifies the person. Orders and point history stay, tied to a nameless account, so draw totals still add up. */
+export async function deleteAccountAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const limit = rateLimit(`delete:${user.id}`, 5, 15 * 60_000);
+  if (!limit.ok) return tooMany(limit.retryAfterSec);
+  if (user.role !== 'user') return { error: 'Staff accounts are removed by an administrator. Please contact us.' };
+  const [row] = await query<UserRow>('SELECT id, pass_hash, role FROM users WHERE id=?', [user.id]);
+  if (!row || !(await verifyPassword(text(fd, 'password').slice(0, 200), row.pass_hash))) return { error: 'That password is not right.' };
+  if (text(fd, 'confirm').trim().toUpperCase() !== 'DELETE') return { error: 'Type DELETE in the box to confirm.' };
+  const [open] = await query<RowDataPacket & { n: number }>("SELECT COUNT(*) AS n FROM orders WHERE user_id=? AND status='pending'", [user.id]);
+  if (Number(open.n) > 0) return { error: 'You have an order waiting for approval. Please wait until it is approved or rejected, then delete your account.' };
+
+  await tx(async (c) => {
+    await c.exec('DELETE FROM favourites WHERE user_id=?', [user.id]);
+    await c.exec('DELETE FROM password_resets WHERE user_id=?', [user.id]);
+    await c.exec('DELETE FROM email_tokens WHERE user_id=?', [user.id]);
+    await c.exec(
+      "UPDATE users SET email=?, pass_hash=?, nickname=NULL, signup_ip=NULL, totp_secret=NULL, totp_on=0, blocked=1, points=0, pending_bonus=0 WHERE id=?",
+      [`deleted-${user.id}@deleted.invalid`, `x$${randomBytes(24).toString('hex')}`, user.id],
+    );
+  });
+  await exec("INSERT INTO audit_log (user_id, action, detail) VALUES (?,?,?)", [user.id, 'account_deleted', 'Deleted by the user']).catch(() => {});
+  await destroySession();
+  redirect('/login?deleted=1');
 }
 
 export async function logoutAction() {

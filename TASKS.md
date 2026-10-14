@@ -78,3 +78,10 @@ Deliberate deviations from the brief (see DESIGN.md): 7 ball columns on mobile (
 - [x] iPhone Safari: fields under 16px made the page zoom on focus (contact, forgot, settings); all fields are 16px on phones now.
 - [x] Optional Google Analytics 4 (GA_MEASUREMENT_ID) and Search Console meta tag (GOOGLE_SITE_VERIFICATION), both off until set; privacy text updated.
 - [ ] Owner: set GA_MEASUREMENT_ID + GOOGLE_SITE_VERIFICATION on Hostinger, verify in Search Console and submit /sitemap.xml; turn on Hostinger backups (hPanel > Backups) and download the admin JSON backup; test in real Safari on an iPhone.
+
+## Legal / compliance pass (nextjs)
+- [x] Sign-up: required "18 or older + Terms + Privacy" tick-box (also enforced on the server). Contact form says how the message is used.
+- [x] Delete my account (Account > Settings, users only): password + typing DELETE; removes email, password, nickname, IP hash, 2FA, favourites, tokens; orders and point history stay on a nameless account; refused while an order is pending. Staff accounts are removed by an admin.
+- [x] Cookie notice shown only when GA_MEASUREMENT_ID is set; Google Analytics loads only after Accept, choice kept in localStorage.
+- [x] Privacy (host, retention, deletion, analytics) and Terms (no payments, no refunds) updated; counselling line in the footer; /.well-known/security.txt.
+- [ ] Owner: legal name/company + contact address for the footer and Terms (not invented); verify the 1834 633 counselling number is current; have a lawyer read Privacy/Terms before launch.

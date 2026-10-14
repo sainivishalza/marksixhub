@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState } from 'react';
 import { contactAction, type ContactState } from '@/actions/contact';
 import { FormMessage, SubmitButton } from '@/components/submit-button';
@@ -27,6 +28,7 @@ export function ContactForm() {
       <div aria-hidden className="absolute -left-[9999px]">
         <label>Leave this empty<input name="website" tabIndex={-1} autoComplete="off" /></label>
       </div>
+      <p className="text-xs text-mute">We use your name, email and message only to reply to you. See the <Link href="/privacy" className="text-gold-bright underline underline-offset-4">Privacy policy</Link>.</p>
       <FormMessage error={state.error} />
       <SubmitButton size="lg" pendingText="Sending..." className="w-full">Send message</SubmitButton>
     </form>

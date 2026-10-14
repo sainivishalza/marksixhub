@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Inter, JetBrains_Mono, Playfair_Display } from 'next/font/google';
+import { Analytics } from '@/components/analytics';
 import { JsonLd } from '@/components/json-ld';
 import { BASE_URL, IS_STAGING, absolute } from '@/lib/seo';
 import { getSettings } from '@/lib/settings';
@@ -41,12 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to content
         </a>
         {children}
-        {GA_ID && !IS_STAGING ? (
-          <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
-            <Script id="ga4" strategy="afterInteractive">{`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}',{anonymize_ip:true});`}</Script>
-          </>
-        ) : null}
+        {GA_ID && !IS_STAGING ? <Analytics id={GA_ID} /> : null}
         {process.env.PLAUSIBLE_DOMAIN && !IS_STAGING ? <Script defer data-domain={process.env.PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" strategy="afterInteractive" /> : null}
         <JsonLd data={{ '@context': 'https://schema.org', '@type': 'WebSite', name: settings.siteName, url: absolute('/'), inLanguage: 'en' }} />
       </body>

@@ -24,7 +24,7 @@ export function SiteFooter({ siteName = SITE_NAME }: { siteName?: string }) {
             {siteName} is an independent information site. It is not affiliated with or endorsed by the Hong Kong Jockey Club. We do not
             sell tickets, take bets or hold money. Mark Six can only be played through the HKJC, where it is legal.
           </p>
-          <p>Play responsibly. Gambling can be addictive and is for adults only. Never spend money you cannot afford to lose.</p>
+          <p>Play responsibly. Gambling can be addictive and is for adults only. Never spend money you cannot afford to lose. In Hong Kong, free confidential gambling counselling is available on <a href="tel:1834633" className="text-gold-bright hover:underline">1834 633</a>.</p>
           <p>
             Email: <a href={`mailto:${CONTACT_EMAIL}`} className="inline-block py-2 text-gold-bright hover:underline">{CONTACT_EMAIL}</a>
             {CONTACT_PHONE ? (

@@ -9,8 +9,8 @@ import { safeNext } from '@/lib/validate';
 
 export const metadata: Metadata = { title: 'Log in', robots: { index: false, follow: false } };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; reset?: string; out?: string }> }) {
-  const { next, reset, out } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; reset?: string; out?: string; deleted?: string }> }) {
+  const { next, reset, out, deleted } = await searchParams;
   const user = await getUser();
   // Only an explicit ?next= is forced; otherwise the form lets staff land on /admin and everyone else on /account.
   const requested = safeNext(next, '');
@@ -19,6 +19,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <AuthShell title="Welcome back" intro="Log in to see your orders, receipts and points.">
       <div className="surface p-6 sm:p-8">
         <h2 className="mb-5 font-serif text-2xl">Log in</h2>
+        {deleted ? <p role="status" className="mb-4 rounded-xl border border-win/40 bg-win/10 px-4 py-2 text-sm text-win">Your account has been deleted.</p> : null}
         {out ? <p role="status" className="mb-4 rounded-xl border border-win/40 bg-win/10 px-4 py-2 text-sm text-win">You have been logged out.</p> : null}
         {reset ? <p role="status" className="mb-4 rounded-xl border border-win/40 bg-win/10 px-4 py-2 text-sm text-win">Password changed. Log in with your new password.</p> : null}
         <LoginForm next={requested} />

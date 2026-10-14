@@ -16,6 +16,8 @@ export default function TermsPage() {
         Points are free play credits. They cannot be bought, sold, transferred or exchanged for money or prizes. Tickets placed with points
         are for fun and do not enter any real lottery. To play the real Mark Six you must use the official operator in Hong Kong.
       </p>
+      <h2 className="pt-4 text-2xl text-ivory">No payments, no refunds</h2>
+      <p>Nothing on this site costs money, so there is nothing to refund. If a ticket is rejected or a result is corrected, the points are returned to your balance.</p>
       <h2 className="pt-4 text-2xl text-ivory">Adults only</h2>
       <p>You must be 18 or older. Play responsibly.</p>
       <h2 className="pt-4 text-2xl text-ivory">Accuracy</h2>
